@@ -1,8 +1,9 @@
 /*
+ * SPDX-FileCopyrightText: Mistial Dev
  * SPDX-License-Identifier: Unlicense
  *
  * tiny-DES-c
- * Portable, high-performance C implementation of DES and Triple-DES (3DES / TDES)
+ * Portable C implementation of DES and Triple-DES (3DES / TDES)
  * optimized for small embedded devices and microcontrollers.
  *
  * Inspired by and created in the design style of kokke's tiny-AES-c:
@@ -313,6 +314,38 @@ static void increment_iv(uint8_t* iv)
     if (++iv[i] != 0)
       break;
   }
+}
+#endif
+
+/*****************************************************************************/
+/* Public Functions: secure wipe                                             */
+/*****************************************************************************/
+
+void DES_secure_zero(void* memory, size_t length)
+{
+  volatile uint8_t* bytes = (volatile uint8_t*)memory;
+  size_t i;
+
+  for (i = 0; i < length; ++i)
+    bytes[i] = 0;
+#if defined(__GNUC__) || defined(__clang__)
+  __asm__ __volatile__("" ::: "memory");
+#endif
+}
+
+void DES_ctx_clear(struct DES_ctx* ctx)
+{
+  if (ctx == NULL)
+    return;
+  DES_secure_zero(ctx, sizeof(*ctx));
+}
+
+#if defined(TDES) && (TDES == 1)
+void DES3_ctx_clear(struct DES3_ctx* ctx)
+{
+  if (ctx == NULL)
+    return;
+  DES_secure_zero(ctx, sizeof(*ctx));
 }
 #endif
 
@@ -828,6 +861,10 @@ static void cmac_generate_subkeys(const struct cmac_cipher* c, uint8_t* k1, uint
   {
     k2[7] ^= const_Rb;
   }
+
+#if DES_ZEROIZE
+  DES_secure_zero(L, sizeof(L));
+#endif
 }
 
 int DES_cmac_with_iv(const uint8_t* key, size_t keylen, const uint8_t* message, size_t message_len, const uint8_t* iv, uint8_t* cmac_out)
@@ -905,12 +942,25 @@ int DES_cmac_with_iv(const uint8_t* key, size_t keylen, const uint8_t* message, 
   cmac_encrypt_block(&cipher, mac);
 
   memcpy(cmac_out, mac, DES_BLOCKLEN);
+
+#if DES_ZEROIZE
+  DES_secure_zero(&cipher, sizeof(cipher));
+  DES_secure_zero(k1, sizeof(k1));
+  DES_secure_zero(k2, sizeof(k2));
+  DES_secure_zero(last_block, sizeof(last_block));
+  DES_secure_zero(mac, sizeof(mac));
+#endif
+
   return 0;
 }
 
 int DES_cmac(const uint8_t* key, size_t keylen, const uint8_t* message, size_t message_len, uint8_t* cmac_out)
 {
   uint8_t zero_iv[DES_BLOCKLEN] = {0};
-  return DES_cmac_with_iv(key, keylen, message, message_len, zero_iv, cmac_out);
+  int rc = DES_cmac_with_iv(key, keylen, message, message_len, zero_iv, cmac_out);
+#if DES_ZEROIZE
+  DES_secure_zero(zero_iv, sizeof(zero_iv));
+#endif
+  return rc;
 }
 

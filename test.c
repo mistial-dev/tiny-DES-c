@@ -611,6 +611,56 @@ static MunitResult test_des_cmac_single_des_matches_2k3des_degenerate(const Muni
   return MUNIT_OK;
 }
 
+/* Secure wipe / context clear smoke tests */
+static MunitResult test_des_secure_zero_and_clear(const MunitParameter params[], void* data)
+{
+  (void) params;
+  (void) data;
+
+  uint8_t buf[16];
+  struct DES_ctx ctx;
+  size_t i;
+
+  for (i = 0; i < sizeof(buf); ++i)
+    buf[i] = (uint8_t)(0xA5U + (uint8_t)i);
+
+  DES_secure_zero(buf, sizeof(buf));
+  for (i = 0; i < sizeof(buf); ++i)
+    munit_assert_uint8(buf[i], ==, 0);
+
+  DES_init_ctx(&ctx, des_test_key);
+  /* Subkey material should be non-zero after init for this KAT key. */
+  munit_assert_int(ctx.Sk[0][0] != 0 || ctx.Sk[0][1] != 0, ==, 1);
+
+  DES_ctx_clear(&ctx);
+  {
+    const uint8_t* p = (const uint8_t*)&ctx;
+    for (i = 0; i < sizeof(ctx); ++i)
+      munit_assert_uint8(p[i], ==, 0);
+  }
+
+  DES_ctx_clear(NULL); /* must not crash */
+
+#if defined(TDES) && (TDES == 1)
+  {
+    struct DES3_ctx tctx;
+    DES3_init_ctx(&tctx, tdes3_key, 24);
+    DES3_ctx_clear(&tctx);
+    {
+      const uint8_t* p = (const uint8_t*)&tctx;
+      for (i = 0; i < sizeof(tctx); ++i)
+        munit_assert_uint8(p[i], ==, 0);
+    }
+    DES3_ctx_clear(NULL);
+  }
+#endif
+
+  munit_assert_int(DES_OK, ==, 0);
+  munit_assert_int(DES_ERR, ==, -1);
+
+  return MUNIT_OK;
+}
+
 
 /* --- Test Suite Setup --- */
 
@@ -633,6 +683,7 @@ static MunitTest test_suite_tests[] = {
   { "/tdes_single_des_equiv",            test_tdes_single_des_equivalence,        NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL },
   { "/des_cmac",                          test_des_cmac,                          NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL },
   { "/des_cmac_single_des_degenerate",    test_des_cmac_single_des_matches_2k3des_degenerate, NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL },
+  { "/des_secure_zero_and_clear",         test_des_secure_zero_and_clear,         NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL },
 #if DES_CAVP_AVAILABLE
   { "/cavp",                              test_cavp,                              NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL },
 #endif

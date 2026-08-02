@@ -1,4 +1,5 @@
 /*
+ * SPDX-FileCopyrightText: Mistial Dev
  * SPDX-License-Identifier: Unlicense
  */
 
@@ -10,11 +11,33 @@
 
 /**
  * @file des.h
- * @brief Portable, high-performance C implementation of DES and Triple-DES (3DES / TDES).
+ * @brief Portable C implementation of DES and Triple-DES (3DES / TDES).
  *
  * Designed for microcontrollers and embedded devices.
  * Inspired by kokke's tiny-AES-c.
  */
+
+/* Status codes used by fallible APIs in this library. */
+#define DES_OK   0
+#define DES_ERR  (-1)
+
+/* When 1 (default), one-shot paths wipe stack secrets on exit. */
+#ifndef DES_ZEROIZE
+  #define DES_ZEROIZE 1
+#endif
+
+#if (DES_ZEROIZE != 0) && (DES_ZEROIZE != 1)
+  #error "DES_ZEROIZE must be 0 or 1"
+#endif
+
+/* When 1, classical buffer APIs reject NULL arguments (compiled out when 0). */
+#ifndef DES_STRICT
+  #define DES_STRICT 0
+#endif
+
+#if (DES_STRICT != 0) && (DES_STRICT != 1)
+  #error "DES_STRICT must be 0 or 1"
+#endif
 
 #ifndef CBC
   #if defined(DES_ENABLE_CBC)
@@ -119,6 +142,17 @@ struct DES3_ctx
 
 #ifdef __cplusplus
 extern "C" {
+#endif
+
+/* Best-effort wipe of sensitive bytes (volatile stores; not a formal barrier). */
+void DES_secure_zero(void* memory, size_t length);
+
+/* Wipe a DES context (subkeys and IV when present). */
+void DES_ctx_clear(struct DES_ctx* ctx);
+
+#if defined(TDES) && (TDES == 1)
+/* Wipe a Triple DES context (subkeys and IV when present). */
+void DES3_ctx_clear(struct DES3_ctx* ctx);
 #endif
 
 /* --- Single DES API --- */
