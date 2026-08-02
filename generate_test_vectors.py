@@ -72,6 +72,16 @@ def generate_vectors():
     c_3k_cbc = Cipher(TripleDES(tdes_key3), modes.CBC(iv_cbc), backend=backend)
     tdes_3k_cbc_ct = c_3k_cbc.encryptor().update(tdes_pt3)
 
+    # 7. Single DES OFB / CFB64 / CFB8 (via 3DES key1*3)
+    des_ofb_ct = Cipher(TripleDES(des_key1 * 3), modes.OFB(iv_cbc), backend=backend).encryptor().update(des_pt1)
+    des_cfb64_ct = Cipher(TripleDES(des_key1 * 3), modes.CFB(iv_cbc), backend=backend).encryptor().update(des_pt1)
+    des_cfb8_ct = Cipher(TripleDES(des_key1 * 3), modes.CFB8(iv_cbc), backend=backend).encryptor().update(des_pt1)
+
+    # 8. 3-Key 3DES OFB / CFB64 / CFB8
+    tdes_3k_ofb_ct = Cipher(TripleDES(tdes_key3), modes.OFB(iv_cbc), backend=backend).encryptor().update(tdes_pt3)
+    tdes_3k_cfb64_ct = Cipher(TripleDES(tdes_key3), modes.CFB(iv_cbc), backend=backend).encryptor().update(tdes_pt3)
+    tdes_3k_cfb8_ct = Cipher(TripleDES(tdes_key3), modes.CFB8(iv_cbc), backend=backend).encryptor().update(tdes_pt3)
+
     print("Single DES ECB CT:", des_ecb_ct.hex().upper())
     print("Single DES CBC CT:", des_cbc_ct.hex().upper())
     print("2-Key 3DES ECB CT:", tdes_2k_ecb_ct.hex().upper())
@@ -109,6 +119,16 @@ static const uint8_t tdes3_cbc_ct[16] = {{ {hex_array(tdes_3k_cbc_ct)} }};
 
 /* CTR Mode IV */
 static const uint8_t des_ctr_iv[8]    = {{ {hex_array(iv_ctr)} }};
+
+/* Single DES OFB / CFB Test Vectors (IV = des_cbc_iv) */
+static const uint8_t des_ofb_ct[8]    = {{ {hex_array(des_ofb_ct)} }};
+static const uint8_t des_cfb64_ct[8]  = {{ {hex_array(des_cfb64_ct)} }};
+static const uint8_t des_cfb8_ct[8]   = {{ {hex_array(des_cfb8_ct)} }};
+
+/* 3-Key 3DES OFB / CFB Test Vectors (IV = des_cbc_iv) */
+static const uint8_t tdes3_ofb_ct[16]   = {{ {hex_array(tdes_3k_ofb_ct)} }};
+static const uint8_t tdes3_cfb64_ct[16] = {{ {hex_array(tdes_3k_cfb64_ct)} }};
+static const uint8_t tdes3_cfb8_ct[16]  = {{ {hex_array(tdes_3k_cfb8_ct)} }};
 
 #endif /* TEST_VECTORS_H */
 """

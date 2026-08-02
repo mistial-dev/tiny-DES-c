@@ -48,6 +48,45 @@
   #endif
 #endif
 
+#ifndef CFB1
+  #if defined(DES_ENABLE_CFB1)
+    #define CFB1 DES_ENABLE_CFB1
+  #else
+    #define CFB1 1
+  #endif
+#endif
+
+#ifndef CFB8
+  #if defined(DES_ENABLE_CFB8)
+    #define CFB8 DES_ENABLE_CFB8
+  #else
+    #define CFB8 1
+  #endif
+#endif
+
+#ifndef CFB64
+  #if defined(DES_ENABLE_CFB64)
+    #define CFB64 DES_ENABLE_CFB64
+  #else
+    #define CFB64 1
+  #endif
+#endif
+
+#ifndef OFB
+  #if defined(DES_ENABLE_OFB)
+    #define OFB DES_ENABLE_OFB
+  #else
+    #define OFB 1
+  #endif
+#endif
+
+/* Modes that keep chaining state in ctx->Iv */
+#if (CBC == 1) || (CTR == 1) || (CFB1 == 1) || (CFB8 == 1) || (CFB64 == 1) || (OFB == 1)
+  #define DES_NEEDS_IV 1
+#else
+  #define DES_NEEDS_IV 0
+#endif
+
 #define DES_BLOCKLEN     8  /**< Block length in bytes - DES is a 64-bit (8 bytes) block cipher */
 #define DES_KEYLEN       8  /**< Single DES key length in bytes (64 bits total, 56 bits effective) */
 
@@ -60,7 +99,7 @@
 struct DES_ctx
 {
   uint32_t Sk[16][2];
-#if (defined(CBC) && (CBC == 1)) || (defined(CTR) && (CTR == 1))
+#if DES_NEEDS_IV
   uint8_t Iv[DES_BLOCKLEN];
 #endif
 };
@@ -72,7 +111,7 @@ struct DES_ctx
 struct DES3_ctx
 {
   uint32_t Sk[48][2];
-#if (defined(CBC) && (CBC == 1)) || (defined(CTR) && (CTR == 1))
+#if DES_NEEDS_IV
   uint8_t Iv[DES_BLOCKLEN];
 #endif
 };
@@ -91,7 +130,7 @@ extern "C" {
  */
 void DES_init_ctx(struct DES_ctx* ctx, const uint8_t* key);
 
-#if (defined(CBC) && (CBC == 1)) || (defined(CTR) && (CTR == 1))
+#if DES_NEEDS_IV
 /**
  * @brief Initialize a Single DES context with key and IV.
  * @param ctx Pointer to Single DES context structure.
@@ -152,6 +191,78 @@ void DES_CBC_decrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length);
 void DES_CTR_xcrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length);
 #endif
 
+#if defined(CFB64) && (CFB64 == 1)
+/**
+ * @brief Encrypt buffer in 64-bit Cipher Feedback (CFB64) mode using Single DES.
+ * @param ctx Pointer to initialized Single DES context (IV holds chaining state).
+ * @param buf Data buffer (length must be a multiple of 8 bytes). Encrypted in-place.
+ * @param length Data length in bytes (must be a multiple of 8).
+ */
+void DES_CFB64_encrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length);
+
+/**
+ * @brief Decrypt buffer in 64-bit Cipher Feedback (CFB64) mode using Single DES.
+ * @param ctx Pointer to initialized Single DES context (IV holds chaining state).
+ * @param buf Data buffer (length must be a multiple of 8 bytes). Decrypted in-place.
+ * @param length Data length in bytes (must be a multiple of 8).
+ */
+void DES_CFB64_decrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length);
+#endif
+
+#if defined(CFB8) && (CFB8 == 1)
+/**
+ * @brief Encrypt buffer in 8-bit Cipher Feedback (CFB8) mode using Single DES.
+ * @param ctx Pointer to initialized Single DES context (IV holds chaining state).
+ * @param buf Data buffer (arbitrary length). Encrypted in-place.
+ * @param length Data length in bytes.
+ */
+void DES_CFB8_encrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length);
+
+/**
+ * @brief Decrypt buffer in 8-bit Cipher Feedback (CFB8) mode using Single DES.
+ * @param ctx Pointer to initialized Single DES context (IV holds chaining state).
+ * @param buf Data buffer (arbitrary length). Decrypted in-place.
+ * @param length Data length in bytes.
+ */
+void DES_CFB8_decrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length);
+#endif
+
+#if defined(CFB1) && (CFB1 == 1)
+/**
+ * @brief Encrypt bits in 1-bit Cipher Feedback (CFB1) mode using Single DES.
+ *
+ * Bits are packed MSB-first: bit i of the stream is (buf[i/8] >> (7 - i%8)) & 1.
+ * Trailing pad bits of the final byte are left unchanged.
+ *
+ * @param ctx Pointer to initialized Single DES context (IV holds chaining state).
+ * @param buf Packed bit buffer. Encrypted in-place.
+ * @param bit_length Data length in bits.
+ */
+void DES_CFB1_encrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t bit_length);
+
+/**
+ * @brief Decrypt bits in 1-bit Cipher Feedback (CFB1) mode using Single DES.
+ *
+ * Bits are packed MSB-first: bit i of the stream is (buf[i/8] >> (7 - i%8)) & 1.
+ * Trailing pad bits of the final byte are left unchanged.
+ *
+ * @param ctx Pointer to initialized Single DES context (IV holds chaining state).
+ * @param buf Packed bit buffer. Decrypted in-place.
+ * @param bit_length Data length in bits.
+ */
+void DES_CFB1_decrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t bit_length);
+#endif
+
+#if defined(OFB) && (OFB == 1)
+/**
+ * @brief Encrypt/Decrypt buffer in Output Feedback (OFB) stream mode using Single DES.
+ * @param ctx Pointer to initialized Single DES context (IV holds chaining state).
+ * @param buf Data buffer (length must be a multiple of 8 bytes). Transformed in-place.
+ * @param length Data length in bytes (must be a multiple of 8).
+ */
+void DES_OFB_xcrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length);
+#endif
+
 
 /* --- Triple DES (3DES / TDES) API --- */
 #if defined(TDES) && (TDES == 1)
@@ -164,7 +275,7 @@ void DES_CTR_xcrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length);
  */
 void DES3_init_ctx(struct DES3_ctx* ctx, const uint8_t* key, size_t keylen);
 
-#if (defined(CBC) && (CBC == 1)) || (defined(CTR) && (CTR == 1))
+#if DES_NEEDS_IV
 /**
  * @brief Initialize a Triple DES (3DES) context with key and IV.
  * @param ctx Pointer to 3DES context structure.
@@ -224,6 +335,78 @@ void DES3_CBC_decrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length);
  * @param length Data length in bytes.
  */
 void DES3_CTR_xcrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length);
+#endif
+
+#if defined(CFB64) && (CFB64 == 1)
+/**
+ * @brief Encrypt buffer in 64-bit Cipher Feedback (CFB64) mode using 3DES.
+ * @param ctx Pointer to initialized 3DES context (IV holds chaining state).
+ * @param buf Data buffer (length must be a multiple of 8 bytes). Encrypted in-place.
+ * @param length Data length in bytes (must be a multiple of 8).
+ */
+void DES3_CFB64_encrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length);
+
+/**
+ * @brief Decrypt buffer in 64-bit Cipher Feedback (CFB64) mode using 3DES.
+ * @param ctx Pointer to initialized 3DES context (IV holds chaining state).
+ * @param buf Data buffer (length must be a multiple of 8 bytes). Decrypted in-place.
+ * @param length Data length in bytes (must be a multiple of 8).
+ */
+void DES3_CFB64_decrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length);
+#endif
+
+#if defined(CFB8) && (CFB8 == 1)
+/**
+ * @brief Encrypt buffer in 8-bit Cipher Feedback (CFB8) mode using 3DES.
+ * @param ctx Pointer to initialized 3DES context (IV holds chaining state).
+ * @param buf Data buffer (arbitrary length). Encrypted in-place.
+ * @param length Data length in bytes.
+ */
+void DES3_CFB8_encrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length);
+
+/**
+ * @brief Decrypt buffer in 8-bit Cipher Feedback (CFB8) mode using 3DES.
+ * @param ctx Pointer to initialized 3DES context (IV holds chaining state).
+ * @param buf Data buffer (arbitrary length). Decrypted in-place.
+ * @param length Data length in bytes.
+ */
+void DES3_CFB8_decrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length);
+#endif
+
+#if defined(CFB1) && (CFB1 == 1)
+/**
+ * @brief Encrypt bits in 1-bit Cipher Feedback (CFB1) mode using 3DES.
+ *
+ * Bits are packed MSB-first: bit i of the stream is (buf[i/8] >> (7 - i%8)) & 1.
+ * Trailing pad bits of the final byte are left unchanged.
+ *
+ * @param ctx Pointer to initialized 3DES context (IV holds chaining state).
+ * @param buf Packed bit buffer. Encrypted in-place.
+ * @param bit_length Data length in bits.
+ */
+void DES3_CFB1_encrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t bit_length);
+
+/**
+ * @brief Decrypt bits in 1-bit Cipher Feedback (CFB1) mode using 3DES.
+ *
+ * Bits are packed MSB-first: bit i of the stream is (buf[i/8] >> (7 - i%8)) & 1.
+ * Trailing pad bits of the final byte are left unchanged.
+ *
+ * @param ctx Pointer to initialized 3DES context (IV holds chaining state).
+ * @param buf Packed bit buffer. Decrypted in-place.
+ * @param bit_length Data length in bits.
+ */
+void DES3_CFB1_decrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t bit_length);
+#endif
+
+#if defined(OFB) && (OFB == 1)
+/**
+ * @brief Encrypt/Decrypt buffer in Output Feedback (OFB) stream mode using 3DES.
+ * @param ctx Pointer to initialized 3DES context (IV holds chaining state).
+ * @param buf Data buffer (length must be a multiple of 8 bytes). Transformed in-place.
+ * @param length Data length in bytes (must be a multiple of 8).
+ */
+void DES3_OFB_xcrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length);
 #endif
 
 #endif /* #if defined(TDES) && (TDES == 1) */

@@ -62,6 +62,48 @@ public:
         DES_CTR_xcrypt_buffer(&ctx_, data.data(), data.size());
     }
 
+#if defined(CFB64) && (CFB64 == 1)
+    void encrypt_cfb64(std::vector<uint8_t>& data) {
+        if (data.size() % 8 != 0) {
+            throw std::invalid_argument("Data size must be a multiple of 8 for CFB64 mode");
+        }
+        DES_CFB64_encrypt_buffer(&ctx_, data.data(), data.size());
+    }
+
+    void decrypt_cfb64(std::vector<uint8_t>& data) {
+        if (data.size() % 8 != 0) {
+            throw std::invalid_argument("Data size must be a multiple of 8 for CFB64 mode");
+        }
+        DES_CFB64_decrypt_buffer(&ctx_, data.data(), data.size());
+    }
+#endif /* CFB64 */
+
+#if defined(CFB8) && (CFB8 == 1)
+    void encrypt_cfb8(std::vector<uint8_t>& data) {
+        DES_CFB8_encrypt_buffer(&ctx_, data.data(), data.size());
+    }
+
+    void decrypt_cfb8(std::vector<uint8_t>& data) {
+        DES_CFB8_decrypt_buffer(&ctx_, data.data(), data.size());
+    }
+#endif /* CFB8 */
+
+#if defined(CFB1) && (CFB1 == 1)
+    void encrypt_cfb1(std::vector<uint8_t>& data, size_t bit_length) {
+        DES_CFB1_encrypt_buffer(&ctx_, data.data(), bit_length);
+    }
+
+    void decrypt_cfb1(std::vector<uint8_t>& data, size_t bit_length) {
+        DES_CFB1_decrypt_buffer(&ctx_, data.data(), bit_length);
+    }
+#endif /* CFB1 */
+
+#if defined(OFB) && (OFB == 1)
+    void xcrypt_ofb(std::vector<uint8_t>& data) {
+        DES_OFB_xcrypt_buffer(&ctx_, data.data(), data.size());
+    }
+#endif /* OFB */
+
     const DES_ctx& get_c_ctx() const { return ctx_; }
 
 private:
@@ -115,6 +157,48 @@ public:
     void xcrypt_ctr(std::vector<uint8_t>& data) {
         DES3_CTR_xcrypt_buffer(&ctx_, data.data(), data.size());
     }
+
+#if defined(CFB64) && (CFB64 == 1)
+    void encrypt_cfb64(std::vector<uint8_t>& data) {
+        if (data.size() % 8 != 0) {
+            throw std::invalid_argument("Data size must be a multiple of 8 for CFB64 mode");
+        }
+        DES3_CFB64_encrypt_buffer(&ctx_, data.data(), data.size());
+    }
+
+    void decrypt_cfb64(std::vector<uint8_t>& data) {
+        if (data.size() % 8 != 0) {
+            throw std::invalid_argument("Data size must be a multiple of 8 for CFB64 mode");
+        }
+        DES3_CFB64_decrypt_buffer(&ctx_, data.data(), data.size());
+    }
+#endif /* CFB64 */
+
+#if defined(CFB8) && (CFB8 == 1)
+    void encrypt_cfb8(std::vector<uint8_t>& data) {
+        DES3_CFB8_encrypt_buffer(&ctx_, data.data(), data.size());
+    }
+
+    void decrypt_cfb8(std::vector<uint8_t>& data) {
+        DES3_CFB8_decrypt_buffer(&ctx_, data.data(), data.size());
+    }
+#endif /* CFB8 */
+
+#if defined(CFB1) && (CFB1 == 1)
+    void encrypt_cfb1(std::vector<uint8_t>& data, size_t bit_length) {
+        DES3_CFB1_encrypt_buffer(&ctx_, data.data(), bit_length);
+    }
+
+    void decrypt_cfb1(std::vector<uint8_t>& data, size_t bit_length) {
+        DES3_CFB1_decrypt_buffer(&ctx_, data.data(), bit_length);
+    }
+#endif /* CFB1 */
+
+#if defined(OFB) && (OFB == 1)
+    void xcrypt_ofb(std::vector<uint8_t>& data) {
+        DES3_OFB_xcrypt_buffer(&ctx_, data.data(), data.size());
+    }
+#endif /* OFB */
 
     const DES3_ctx& get_c_ctx() const { return ctx_; }
 

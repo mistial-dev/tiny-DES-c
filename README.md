@@ -19,7 +19,7 @@ It is designed as a drop-in cryptographic engine for embedded applications and m
   * Single DES (64-bit key / 56-bit effective key)
   * 2-Key 3DES (128-bit key / 112-bit effective key: K1, K2, K1)
   * 3-Key 3DES (192-bit key / 168-bit effective key: K1, K2, K3)
-* **Modes of Operation**: ECB, CBC, and CTR modes (can be individually enabled/disabled at compile time).
+* **Modes of Operation**: ECB, CBC, CTR, CFB1, CFB8, CFB64, and OFB modes (can be individually enabled/disabled at compile time).
 * **NIST SP 800-38B CMAC Engine**:
   * Supports Single DES, 2-Key 3DES, and 3-Key 3DES CMAC subkey generation and message authentication.
 
@@ -43,6 +43,14 @@ void DES_CBC_decrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length);
 
 void DES_CTR_xcrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length);
 
+void DES_CFB64_encrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length);
+void DES_CFB64_decrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length);
+void DES_CFB8_encrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length);
+void DES_CFB8_decrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length);
+void DES_CFB1_encrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t bit_length);
+void DES_CFB1_decrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t bit_length);
+void DES_OFB_xcrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length);
+
 /* --- Triple DES (3DES / TDES) --- */
 void DES3_init_ctx(struct DES3_ctx* ctx, const uint8_t* key, size_t keylen);
 void DES3_init_ctx_iv(struct DES3_ctx* ctx, const uint8_t* key, size_t keylen, const uint8_t* iv);
@@ -55,6 +63,14 @@ void DES3_CBC_encrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length);
 void DES3_CBC_decrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length);
 
 void DES3_CTR_xcrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length);
+
+void DES3_CFB64_encrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length);
+void DES3_CFB64_decrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length);
+void DES3_CFB8_encrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length);
+void DES3_CFB8_decrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length);
+void DES3_CFB1_encrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t bit_length);
+void DES3_CFB1_decrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t bit_length);
+void DES3_OFB_xcrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length);
 
 /* --- CMAC --- */
 int  DES_cmac(const uint8_t* key, size_t keylen, const uint8_t* message, size_t message_len, uint8_t* cmac_out);
@@ -130,26 +146,46 @@ Running test suite with seed 0x91623758...
 /tiny-des-c/tdes3_ecb                         [ OK    ]
 /tiny-des-c/tdes3_cbc                         [ OK    ]
 /tiny-des-c/tdes3_ctr                         [ OK    ]
+/tiny-des-c/des_ofb                           [ OK    ]
+/tiny-des-c/des_cfb64                         [ OK    ]
+/tiny-des-c/des_cfb8                          [ OK    ]
+/tiny-des-c/des_cfb1                          [ OK    ]
+/tiny-des-c/tdes3_feedback_modes              [ OK    ]
+/tiny-des-c/feedback_mode_chaining            [ OK    ]
 /tiny-des-c/tdes_single_des_equiv             [ OK    ]
 /tiny-des-c/des_cmac                          [ OK    ]
 /tiny-des-c/des_cmac_single_des_degenerate    [ OK    ]
-/tiny-des-c/protocol_utilities                [ OK    ]
-13 of 13 (100%) tests successful, 0 (0%) test skipped.
+18 of 18 (100%) tests successful, 0 (0%) test skipped.
 ```
 
-The suite includes NIST reference vectors embedded in [`test.c`](test.c):
+---
 
-* Eight TDES variable-plaintext basis vectors from the CAVP `TECBvartext.rsp` set, exercised through ECB and zero-IV CBC.
-* Corrected TDEA CMAC examples 13–20 from [NIST SP 800-38B, Appendix D](https://nvlpubs.nist.gov/nistpubs/legacy/sp/nistspecialpublication800-38b.pdf), covering two-key and three-key TDEA with empty, complete, partial, and multi-block messages.
+### NIST CAVP Validation
 
-To download the complete NIST CAVP TDES archive for additional manual/reference testing:
+The complete [NIST CAVP](https://csrc.nist.gov/projects/cryptographic-algorithm-validation-program/block-ciphers) TDES response-file corpora are checked in under [`test_vectors/cavp/`](test_vectors/cavp/) and executed by an opt-in test ([`cavp.c`](cavp.c)):
+
+| Directory | Contents | Source archive |
+|---|---|---|
+| `kat/` | Known Answer Tests (invperm, permop, subtab, varkey, vartext) for TECB, TCBC, TCFB1, TCFB8, TCFB64, TOFB | `KAT_TDES.zip` |
+| `mmt/` | Multi-block Message Tests, keying options 2 and 3 | `tdesmmt.zip` |
+| `mct/` | Monte Carlo Tests per NIST SP 800-20 (400 rounds × 10,000 iterations), keying options 2 and 3 | `tdesmct.zip` |
+| `mct_intermediate/` | MCT intermediate-values files (debugging aid, not executed) | `tdesmct_intermediate.zip` |
+
+All archives come from the [CAVP block-ciphers page](https://csrc.nist.gov/projects/cryptographic-algorithm-validation-program/block-ciphers) (`.../documents/des/`). The interleaved/pipelined variants (`TCBCI*`, `TOFBI*`, `TCFBP*`) target multi-engine implementations and are out of scope.
+
+The Monte Carlo driver validates the full chain: at every one of the 400 rounds it checks the computed keys, IV, and text against the recorded values before comparing the round result, so any drift in the SP 800-20 key-update or feedback rules fails immediately with a diagnostic.
 
 ```bash
-curl -L https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/des/KAT_TDES.zip -o /tmp/KAT_TDES.zip
-unzip -q /tmp/KAT_TDES.zip -d /tmp/KAT_TDES
+# Makefile
+make clean && make DES_CAVP=1 test
+
+# CMake (CI runs this on Linux/macOS/Windows)
+cmake -B build -DTINY_DES_CAVP=ON
+cmake --build build --config Release
+ctest --test-dir build -C Release --output-on-failure
 ```
 
-The archive contains the full ECB and CBC KAT sets, including variable-key, permutation, inverse-permutation, and substitution-table tests. The checked-in suite uses a small source-level subset so `make test` remains dependency-free.
+The CAVP run adds a single `/cavp` munit test (~15 s at `-O2`; the MCT files dominate). The default build stays dependency-free and fast: `DES_CAVP` is off unless requested.
 
 ---
 

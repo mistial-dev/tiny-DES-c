@@ -38,7 +38,7 @@ jobs:
         fi
 
     - name: Configure CMake
-      run: cmake -B build -DTINY_DES_BUILD_TESTS=ON
+      run: cmake -B build -DTINY_DES_BUILD_TESTS=ON -DTINY_DES_CAVP=ON
 
     - name: Build
       run: cmake --build build --config Release
