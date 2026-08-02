@@ -204,11 +204,13 @@ private:
 #endif /* DES_ENABLE_TDES */
 
 #if DES_ENABLE_CMAC
-/* C++ CMAC */
+/* C++ CMAC (full 8-byte tag) */
 inline std::array<uint8_t, 8> cmac(const std::vector<uint8_t>& key, const std::vector<uint8_t>& message) {
     std::array<uint8_t, 8> out{};
-    if (DES_cmac(key.data(), key.size(), message.data(), message.size(), out.data()) != 0) {
-        throw std::invalid_argument("Invalid key size for CMAC (must be 8, 16, or 24 bytes)");
+    if (DES_CMAC(key.data(), key.size(),
+                 message.empty() ? nullptr : message.data(), message.size(),
+                 out.data(), out.size()) != DES_OK) {
+        throw std::invalid_argument("DES_CMAC failed (key size or arguments)");
     }
     return out;
 }

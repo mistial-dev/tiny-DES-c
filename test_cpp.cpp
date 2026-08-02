@@ -47,6 +47,7 @@ int main() {
         std::cout << "2. C++ 2-Key 3DES CBC: OK" << std::endl;
     }
 
+#if DES_ENABLE_CMAC
     /* 3. 3-Key 3DES CMAC C++ Test */
     {
         std::vector<uint8_t> key(tdes3_key, tdes3_key + 24);
@@ -55,6 +56,7 @@ int main() {
         assert(mac.size() == 8);
         std::cout << "3. C++ 3-Key 3DES CMAC: OK" << std::endl;
     }
+#endif
 
     std::cout << "ALL C++ TESTS PASSED SUCCESSFULLY!" << std::endl;
     return 0;

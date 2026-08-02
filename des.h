@@ -458,28 +458,35 @@ int DES3_OFB_crypt(struct DES3_ctx* ctx, uint8_t* buf, size_t length);
 /* --- DES / 3DES CMAC (NIST SP 800-38B) --- */
 #if DES_ENABLE_CMAC
 
-/**
- * @brief Calculate NIST SP 800-38B CMAC tag (Zero IV).
- * @param key Pointer to key buffer (8, 16, or 24 bytes).
- * @param keylen Key length in bytes (8, 16, or 24).
- * @param message Message buffer.
- * @param message_len Message length in bytes.
- * @param cmac_out Output buffer for 8-byte CMAC tag.
- * @return 0 on success, -1 on invalid key length.
- */
-int DES_cmac(const uint8_t* key, size_t keylen, const uint8_t* message, size_t message_len, uint8_t* cmac_out);
+/* Full CMAC tag is one DES block; shorter tags are the leading tag_len bytes. */
+#define DES_CMAC_TAG_MAX DES_BLOCKLEN
 
-/**
- * @brief Calculate NIST SP 800-38B CMAC tag with explicit IV.
- * @param key Pointer to key buffer (8, 16, or 24 bytes).
- * @param keylen Key length in bytes (8, 16, or 24).
- * @param message Message buffer.
- * @param message_len Message length in bytes.
- * @param iv Pointer to 8-byte IV (or NULL for zero IV).
- * @param cmac_out Output buffer for 8-byte CMAC tag.
- * @return 0 on success, -1 on invalid key length.
+/*
+ * Minimum CMAC tag length in bytes. SP 800-38B recommends Tlen >= 64 bits for
+ * most applications; shorter tags need careful risk analysis. Default 8 (full
+ * DES block). Override only for exotic vectors.
  */
-int DES_cmac_with_iv(const uint8_t* key, size_t keylen, const uint8_t* message, size_t message_len, const uint8_t* iv, uint8_t* cmac_out);
+#ifndef DES_CMAC_MIN_TAG_LEN
+  #define DES_CMAC_MIN_TAG_LEN 8
+#endif
+
+#if (DES_CMAC_MIN_TAG_LEN < 1) || (DES_CMAC_MIN_TAG_LEN > DES_BLOCKLEN)
+  #error "DES_CMAC_MIN_TAG_LEN must be in 1..8"
+#endif
+
+/*
+ * DES/3DES-CMAC (NIST SP 800-38B). Heap-free one-shot.
+ * keylen must be 8 (single DES), 16 (2-key TDEA), or 24 (3-key TDEA).
+ * tag_len must be in DES_CMAC_MIN_TAG_LEN..DES_CMAC_TAG_MAX.
+ * Empty message: msg may be NULL when msg_len is 0.
+ * Stack secrets wiped when DES_ZEROIZE=1.
+ */
+int DES_CMAC(const uint8_t* key, size_t keylen, const uint8_t* msg, size_t msg_len,
+             uint8_t* tag, size_t tag_len);
+
+/* Constant-time verify of a (possibly truncated) tag. */
+int DES_CMAC_verify(const uint8_t* key, size_t keylen, const uint8_t* msg, size_t msg_len,
+                    const uint8_t* tag, size_t tag_len);
 
 #endif /* DES_ENABLE_CMAC */
 

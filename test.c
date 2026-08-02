@@ -554,38 +554,32 @@ static MunitResult test_tdes_single_des_equivalence(const MunitParameter params[
   return MUNIT_OK;
 }
 
+#if DES_ENABLE_CMAC
 /* CMAC Tests (NIST SP 800-38B) */
 static MunitResult test_des_cmac(const MunitParameter params[], void* data)
 {
   (void) params;
   (void) data;
 
-  uint8_t cmac1[8], cmac2[8], cmac3[8], cmac_empty[8], cmac_null_iv[8];
+  uint8_t cmac1[8], cmac2[8], cmac3[8], cmac_empty[8], bad[8];
   const uint8_t message[] = "tiny-DES-c CMAC Test!";
   size_t msglen = sizeof(message) - 1;
 
-  /* Single DES CMAC */
-  munit_assert_int(0, ==, DES_cmac(des_test_key, 8, message, msglen, cmac1));
+  munit_assert_int(DES_OK, ==, DES_CMAC(des_test_key, 8, message, msglen, cmac1, 8));
+  munit_assert_int(DES_OK, ==, DES_CMAC(tdes2_key, 16, message, msglen, cmac2, 8));
+  munit_assert_int(DES_OK, ==, DES_CMAC(tdes3_key, 24, message, msglen, cmac3, 8));
+  munit_assert_int(DES_OK, ==, DES_CMAC(tdes2_key, 16, NULL, 0, cmac_empty, 8));
 
-  /* 2-Key 3DES CMAC */
-  munit_assert_int(0, ==, DES_cmac(tdes2_key, 16, message, msglen, cmac2));
-
-  /* 3-Key 3DES CMAC */
-  munit_assert_int(0, ==, DES_cmac(tdes3_key, 24, message, msglen, cmac3));
-
-  /* Zero-length message test */
-  munit_assert_int(0, ==, DES_cmac(tdes2_key, 16, NULL, 0, cmac_empty));
-
-  /* NULL IV test matches zero-IV */
-  munit_assert_int(0, ==, DES_cmac_with_iv(tdes2_key, 16, message, msglen, NULL, cmac_null_iv));
-  munit_assert_memory_equal(8, cmac_null_iv, cmac2);
-
-  /* Non-empty & non-equal results */
   munit_assert_memory_not_equal(8, cmac1, cmac2);
   munit_assert_memory_not_equal(8, cmac2, cmac3);
 
-  /* Invalid key length error check */
-  munit_assert_int(-1, ==, DES_cmac(des_test_key, 10, message, msglen, cmac1));
+  munit_assert_int(DES_OK, ==, DES_CMAC_verify(tdes2_key, 16, message, msglen, cmac2, 8));
+  memcpy(bad, cmac2, 8);
+  bad[0] ^= 0x01U;
+  munit_assert_int(DES_ERR, ==, DES_CMAC_verify(tdes2_key, 16, message, msglen, bad, 8));
+
+  munit_assert_int(DES_ERR, ==, DES_CMAC(des_test_key, 10, message, msglen, cmac1, 8));
+  munit_assert_int(DES_ERR, ==, DES_CMAC(des_test_key, 8, message, msglen, cmac1, 0));
 
   return MUNIT_OK;
 }
@@ -604,12 +598,13 @@ static MunitResult test_des_cmac_single_des_matches_2k3des_degenerate(const Muni
   uint8_t message[8] = {0xde, 0xad, 0xbe, 0xef, 0x00, 0x11, 0x22, 0x33};
 
   uint8_t mac8[8], mac16[8];
-  munit_assert_int(0, ==, DES_cmac(key8, sizeof(key8), message, sizeof(message), mac8));
-  munit_assert_int(0, ==, DES_cmac(key16, sizeof(key16), message, sizeof(message), mac16));
+  munit_assert_int(DES_OK, ==, DES_CMAC(key8, sizeof(key8), message, sizeof(message), mac8, 8));
+  munit_assert_int(DES_OK, ==, DES_CMAC(key16, sizeof(key16), message, sizeof(message), mac16, 8));
   munit_assert_memory_equal(8, mac8, mac16);
 
   return MUNIT_OK;
 }
+#endif /* DES_ENABLE_CMAC */
 
 /* Secure wipe / context clear smoke tests */
 static MunitResult test_des_secure_zero_and_clear(const MunitParameter params[], void* data)
@@ -681,8 +676,10 @@ static MunitTest test_suite_tests[] = {
   { "/tdes3_feedback_modes",              test_tdes3_feedback_modes,              NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL },
   { "/feedback_mode_chaining",            test_feedback_mode_chaining,            NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL },
   { "/tdes_single_des_equiv",            test_tdes_single_des_equivalence,        NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL },
+#if DES_ENABLE_CMAC
   { "/des_cmac",                          test_des_cmac,                          NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL },
   { "/des_cmac_single_des_degenerate",    test_des_cmac_single_des_matches_2k3des_degenerate, NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL },
+#endif
   { "/des_secure_zero_and_clear",         test_des_secure_zero_and_clear,         NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL },
 #if DES_CAVP_AVAILABLE
   { "/cavp",                              test_cavp,                              NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL },

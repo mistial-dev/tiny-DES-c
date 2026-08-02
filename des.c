@@ -1144,20 +1144,34 @@ static void cmac_generate_subkeys(const struct cmac_cipher* c, uint8_t* k1, uint
 #endif
 }
 
-int DES_cmac_with_iv(const uint8_t* key, size_t keylen, const uint8_t* message, size_t message_len, const uint8_t* iv, uint8_t* cmac_out)
+int DES_CMAC(const uint8_t* key, size_t keylen, const uint8_t* msg, size_t msg_len,
+             uint8_t* tag, size_t tag_len)
 {
   struct cmac_cipher cipher;
-  if (cmac_cipher_init(&cipher, key, keylen) != 0)
-  {
-    return -1;
-  }
-
   uint8_t k1[DES_BLOCKLEN];
   uint8_t k2[DES_BLOCKLEN];
+  uint8_t last_block[DES_BLOCKLEN];
+  uint8_t mac[DES_BLOCKLEN];
+  size_t n_blocks;
+  size_t last_idx;
+  int is_complete;
+  size_t i;
+
+  if (key == NULL || tag == NULL ||
+      tag_len < DES_CMAC_MIN_TAG_LEN || tag_len > DES_CMAC_TAG_MAX ||
+      (msg_len != 0 && msg == NULL))
+  {
+    return DES_ERR;
+  }
+  if (cmac_cipher_init(&cipher, key, keylen) != 0)
+  {
+    return DES_ERR;
+  }
+
   cmac_generate_subkeys(&cipher, k1, k2);
 
-  size_t n_blocks = (message_len + DES_BLOCKLEN - 1) / DES_BLOCKLEN;
-  int is_complete = 1;
+  n_blocks = (msg_len + DES_BLOCKLEN - 1) / DES_BLOCKLEN;
+  is_complete = 1;
   if (n_blocks == 0)
   {
     n_blocks = 1;
@@ -1165,60 +1179,52 @@ int DES_cmac_with_iv(const uint8_t* key, size_t keylen, const uint8_t* message, 
   }
   else
   {
-    is_complete = (message_len % DES_BLOCKLEN == 0);
+    is_complete = (msg_len % DES_BLOCKLEN == 0);
   }
 
-  uint8_t last_block[DES_BLOCKLEN] = {0};
-  size_t last_idx = n_blocks - 1;
+  memset(last_block, 0, DES_BLOCKLEN);
+  last_idx = n_blocks - 1;
 
   if (is_complete)
   {
-    memcpy(last_block, message + (last_idx * DES_BLOCKLEN), DES_BLOCKLEN);
-    for (uint8_t i = 0; i < DES_BLOCKLEN; ++i)
+    memcpy(last_block, msg + (last_idx * DES_BLOCKLEN), DES_BLOCKLEN);
+    for (i = 0; i < DES_BLOCKLEN; ++i)
     {
       last_block[i] ^= k1[i];
     }
   }
   else
   {
-    size_t rem = message_len % DES_BLOCKLEN;
+    size_t rem = msg_len % DES_BLOCKLEN;
     if (rem > 0)
     {
-      memcpy(last_block, message + (last_idx * DES_BLOCKLEN), rem);
+      memcpy(last_block, msg + (last_idx * DES_BLOCKLEN), rem);
     }
     last_block[rem] = 0x80U;
-    for (uint8_t i = 0; i < DES_BLOCKLEN; ++i)
+    for (i = 0; i < DES_BLOCKLEN; ++i)
     {
       last_block[i] ^= k2[i];
     }
   }
 
-  /* CBC-MAC chain: mac = E(mac ^ M_i) */
-  uint8_t mac[DES_BLOCKLEN];
-  if (iv)
+  /* CBC-MAC chain from zero IV (SP 800-38B). */
+  memset(mac, 0, DES_BLOCKLEN);
+  for (i = 0; i < last_idx; ++i)
   {
-    memcpy(mac, iv, DES_BLOCKLEN);
-  }
-  else
-  {
-    memset(mac, 0, DES_BLOCKLEN);
-  }
-
-  for (size_t i = 0; i < last_idx; ++i)
-  {
-    for (uint8_t j = 0; j < DES_BLOCKLEN; ++j)
+    size_t j;
+    for (j = 0; j < DES_BLOCKLEN; ++j)
     {
-      mac[j] ^= message[i * DES_BLOCKLEN + j];
+      mac[j] ^= msg[i * DES_BLOCKLEN + j];
     }
     cmac_encrypt_block(&cipher, mac);
   }
-  for (uint8_t j = 0; j < DES_BLOCKLEN; ++j)
+  for (i = 0; i < DES_BLOCKLEN; ++i)
   {
-    mac[j] ^= last_block[j];
+    mac[i] ^= last_block[i];
   }
   cmac_encrypt_block(&cipher, mac);
 
-  memcpy(cmac_out, mac, DES_BLOCKLEN);
+  memcpy(tag, mac, tag_len);
 
 #if DES_ZEROIZE
   DES_secure_zero(&cipher, sizeof(cipher));
@@ -1228,17 +1234,35 @@ int DES_cmac_with_iv(const uint8_t* key, size_t keylen, const uint8_t* message, 
   DES_secure_zero(mac, sizeof(mac));
 #endif
 
-  return 0;
+  return DES_OK;
 }
 
-int DES_cmac(const uint8_t* key, size_t keylen, const uint8_t* message, size_t message_len, uint8_t* cmac_out)
+int DES_CMAC_verify(const uint8_t* key, size_t keylen, const uint8_t* msg, size_t msg_len,
+                    const uint8_t* tag, size_t tag_len)
 {
-  uint8_t zero_iv[DES_BLOCKLEN] = {0};
-  int rc = DES_cmac_with_iv(key, keylen, message, message_len, zero_iv, cmac_out);
+  uint8_t computed[DES_CMAC_TAG_MAX];
+  uint8_t difference = 0;
+  size_t i;
+
+  if (tag == NULL ||
+      tag_len < DES_CMAC_MIN_TAG_LEN || tag_len > DES_CMAC_TAG_MAX)
+  {
+    return DES_ERR;
+  }
+  if (DES_CMAC(key, keylen, msg, msg_len, computed, tag_len) != DES_OK)
+  {
+    return DES_ERR;
+  }
+
+  for (i = 0; i < tag_len; ++i)
+  {
+    difference |= (uint8_t)(computed[i] ^ tag[i]);
+  }
+
 #if DES_ZEROIZE
-  DES_secure_zero(zero_iv, sizeof(zero_iv));
+  DES_secure_zero(computed, sizeof(computed));
 #endif
-  return rc;
+  return difference == 0 ? DES_OK : DES_ERR;
 }
 
 #endif /* DES_ENABLE_CMAC */
