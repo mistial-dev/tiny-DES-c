@@ -1,0 +1,658 @@
+/*
+ * SPDX-License-Identifier: Unlicense
+ *
+ * tiny-DES-c
+ * Portable, high-performance C implementation of DES and Triple-DES (3DES / TDES)
+ * optimized for small embedded devices and microcontrollers.
+ *
+ * Inspired by and created in the design style of kokke's tiny-AES-c:
+ * https://github.com/kokke/tiny-AES-c
+ *
+ * All material in this repository is in the public domain.
+ */
+
+#include <string.h>
+#include "des.h"
+
+/*****************************************************************************/
+/* Private Lookup Tables (ROM/Flash)                                         */
+/*****************************************************************************/
+
+/* Combined S-Box & P-Permutation Tables (8 x 64 uint32_t = 2KB ROM) */
+static const uint32_t SP1[64] = {
+  0x00808200U, 0x00000000U, 0x00008000U, 0x00808202U, 0x00808002U, 0x00008202U, 0x00000002U, 0x00008000U,
+  0x00000200U, 0x00808200U, 0x00808202U, 0x00000200U, 0x00800202U, 0x00808002U, 0x00800000U, 0x00000002U,
+  0x00000202U, 0x00800200U, 0x00800200U, 0x00008200U, 0x00008200U, 0x00808000U, 0x00808000U, 0x00800202U,
+  0x00008002U, 0x00800002U, 0x00800002U, 0x00008002U, 0x00000000U, 0x00000202U, 0x00008202U, 0x00800000U,
+  0x00008000U, 0x00808202U, 0x00000002U, 0x00808000U, 0x00808200U, 0x00800000U, 0x00800000U, 0x00000200U,
+  0x00808002U, 0x00008000U, 0x00008200U, 0x00800002U, 0x00000200U, 0x00000002U, 0x00800202U, 0x00008202U,
+  0x00808202U, 0x00008002U, 0x00808000U, 0x00800202U, 0x00800002U, 0x00000202U, 0x00008202U, 0x00808200U,
+  0x00000202U, 0x00800200U, 0x00800200U, 0x00000000U, 0x00008002U, 0x00008200U, 0x00000000U, 0x00808002U
+};
+
+static const uint32_t SP2[64] = {
+  0x40084010U, 0x40004000U, 0x00004000U, 0x00084010U, 0x00080000U, 0x00000010U, 0x40080010U, 0x40004010U,
+  0x40000010U, 0x40084010U, 0x40084000U, 0x40000000U, 0x40004000U, 0x00080000U, 0x00000010U, 0x40080010U,
+  0x00084000U, 0x00080010U, 0x40004010U, 0x00000000U, 0x40000000U, 0x00004000U, 0x00084010U, 0x40080000U,
+  0x00080010U, 0x40000010U, 0x00000000U, 0x00084000U, 0x00004010U, 0x40084000U, 0x40080000U, 0x00004010U,
+  0x00000000U, 0x00084010U, 0x40080010U, 0x00080000U, 0x40004010U, 0x40080000U, 0x40084000U, 0x00004000U,
+  0x40080000U, 0x40004000U, 0x00000010U, 0x40084010U, 0x00084010U, 0x00000010U, 0x00004000U, 0x40000000U,
+  0x00004010U, 0x40084000U, 0x00080000U, 0x40000010U, 0x00080010U, 0x40004010U, 0x40000010U, 0x00080010U,
+  0x00084000U, 0x00000000U, 0x40004000U, 0x00004010U, 0x40000000U, 0x40080010U, 0x40084010U, 0x00084000U
+};
+
+static const uint32_t SP3[64] = {
+  0x00000104U, 0x04010100U, 0x00000000U, 0x04010004U, 0x04000100U, 0x00000000U, 0x00010104U, 0x04000100U,
+  0x00010004U, 0x04000004U, 0x04000004U, 0x00010000U, 0x04010104U, 0x00010004U, 0x04010000U, 0x00000104U,
+  0x04000000U, 0x00000004U, 0x04010100U, 0x00000100U, 0x00010100U, 0x04010000U, 0x04010004U, 0x00010104U,
+  0x04000104U, 0x00010100U, 0x00010000U, 0x04000104U, 0x00000004U, 0x04010104U, 0x00000100U, 0x04000000U,
+  0x04010100U, 0x04000000U, 0x00010004U, 0x00000104U, 0x00010000U, 0x04010100U, 0x04000100U, 0x00000000U,
+  0x00000100U, 0x00010004U, 0x04010104U, 0x04000100U, 0x04000004U, 0x00000100U, 0x00000000U, 0x04010004U,
+  0x04000104U, 0x00010000U, 0x04000000U, 0x04010104U, 0x00000004U, 0x00010104U, 0x00010100U, 0x04000004U,
+  0x04010000U, 0x04000104U, 0x00000104U, 0x04010000U, 0x00010104U, 0x00000004U, 0x04010004U, 0x00010100U
+};
+
+static const uint32_t SP4[64] = {
+  0x80401000U, 0x80001040U, 0x80001040U, 0x00000040U, 0x00401040U, 0x80400040U, 0x80400000U, 0x80001000U,
+  0x00000000U, 0x00401000U, 0x00401000U, 0x80401040U, 0x80000040U, 0x00000000U, 0x00400040U, 0x80400000U,
+  0x80000000U, 0x00001000U, 0x00400000U, 0x80401000U, 0x00000040U, 0x00400000U, 0x80001000U, 0x00001040U,
+  0x80400040U, 0x80000000U, 0x00001040U, 0x00400040U, 0x00001000U, 0x00401040U, 0x80401040U, 0x80000040U,
+  0x00400040U, 0x80400000U, 0x00401000U, 0x80401040U, 0x80000040U, 0x00000000U, 0x00000000U, 0x00401000U,
+  0x00001040U, 0x00400040U, 0x80400040U, 0x80000000U, 0x80401000U, 0x80001040U, 0x80001040U, 0x00000040U,
+  0x80401040U, 0x80000040U, 0x80000000U, 0x00001000U, 0x80400000U, 0x80001000U, 0x00401040U, 0x80400040U,
+  0x80001000U, 0x00001040U, 0x00400000U, 0x80401000U, 0x00000040U, 0x00400000U, 0x00001000U, 0x00401040U
+};
+
+static const uint32_t SP5[64] = {
+  0x00000080U, 0x01040080U, 0x01040000U, 0x21000080U, 0x00040000U, 0x00000080U, 0x20000000U, 0x01040000U,
+  0x20040080U, 0x00040000U, 0x01000080U, 0x20040080U, 0x21000080U, 0x21040000U, 0x00040080U, 0x20000000U,
+  0x01000000U, 0x20040000U, 0x20040000U, 0x00000000U, 0x20000080U, 0x21040080U, 0x21040080U, 0x01000080U,
+  0x21040000U, 0x20000080U, 0x00000000U, 0x21000000U, 0x01040080U, 0x01000000U, 0x21000000U, 0x00040080U,
+  0x00040000U, 0x21000080U, 0x00000080U, 0x01000000U, 0x20000000U, 0x01040000U, 0x21000080U, 0x20040080U,
+  0x01000080U, 0x20000000U, 0x21040000U, 0x01040080U, 0x20040080U, 0x00000080U, 0x01000000U, 0x21040000U,
+  0x21040080U, 0x0040080U, 0x21000000U, 0x21040080U, 0x01040000U, 0x00000000U, 0x20040000U, 0x21000000U,
+  0x00040080U, 0x01000080U, 0x20000080U, 0x00040000U, 0x00000000U, 0x20040000U, 0x01040080U, 0x20000080U
+};
+
+static const uint32_t SP6[64] = {
+  0x10000008U, 0x10200000U, 0x00002000U, 0x10202008U, 0x10200000U, 0x00000008U, 0x10202008U, 0x00200000U,
+  0x10002000U, 0x00202008U, 0x00200000U, 0x10000008U, 0x00200008U, 0x10002000U, 0x10000000U, 0x00002008U,
+  0x00000000U, 0x00200008U, 0x10002008U, 0x00002000U, 0x00202000U, 0x10002008U, 0x00000008U, 0x10200008U,
+  0x10200008U, 0x00000000U, 0x00202008U, 0x10202000U, 0x00002008U, 0x00202000U, 0x10202000U, 0x10000000U,
+  0x10002000U, 0x00000008U, 0x10200008U, 0x00202000U, 0x10202008U, 0x00200000U, 0x00002008U, 0x10000008U,
+  0x00200000U, 0x10002000U, 0x10000000U, 0x00002008U, 0x10000008U, 0x10202008U, 0x00202000U, 0x10200000U,
+  0x00202008U, 0x10202000U, 0x00000000U, 0x10200008U, 0x00000008U, 0x00002000U, 0x10200000U, 0x00202008U,
+  0x00002000U, 0x00200008U, 0x10002008U, 0x00000000U, 0x10202000U, 0x10000000U, 0x00200008U, 0x10002008U
+};
+
+static const uint32_t SP7[64] = {
+  0x00100000U, 0x02100001U, 0x02000401U, 0x00000000U, 0x00000400U, 0x02000401U, 0x00100401U, 0x02100400U,
+  0x02100401U, 0x00100000U, 0x00000000U, 0x02000001U, 0x00000001U, 0x02000000U, 0x02100001U, 0x00000401U,
+  0x02000400U, 0x00100401U, 0x00100001U, 0x02000400U, 0x02000001U, 0x02100000U, 0x02100400U, 0x00100001U,
+  0x02100000U, 0x00000400U, 0x00000401U, 0x02100401U, 0x00100400U, 0x00000001U, 0x02000000U, 0x00100400U,
+  0x02000000U, 0x00100400U, 0x00100000U, 0x02000401U, 0x02000401U, 0x02100001U, 0x02100001U, 0x00000001U,
+  0x00100001U, 0x02000000U, 0x02000400U, 0x00100000U, 0x02100400U, 0x00000401U, 0x00100401U, 0x02100400U,
+  0x00000401U, 0x02000001U, 0x02100401U, 0x02100000U, 0x00100400U, 0x00000000U, 0x00000001U, 0x02100401U,
+  0x00000000U, 0x00100401U, 0x02100000U, 0x00000400U, 0x02000001U, 0x02000400U, 0x00000400U, 0x00100001U
+};
+
+static const uint32_t SP8[64] = {
+  0x08000820U, 0x00000800U, 0x00020000U, 0x08020820U, 0x08000000U, 0x08000820U, 0x00000020U, 0x08000000U,
+  0x00020020U, 0x08020000U, 0x08020820U, 0x00020800U, 0x08020800U, 0x00020820U, 0x00000800U, 0x00000020U,
+  0x08020000U, 0x08000020U, 0x08000800U, 0x00000820U, 0x00020800U, 0x00020020U, 0x08020020U, 0x08020800U,
+  0x00000820U, 0x00000000U, 0x00000000U, 0x08020020U, 0x08000020U, 0x08000800U, 0x00020820U, 0x00020000U,
+  0x00020820U, 0x00020000U, 0x08020800U, 0x00000800U, 0x00000020U, 0x08020020U, 0x00000800U, 0x00020820U,
+  0x08000800U, 0x00000020U, 0x08000020U, 0x08020000U, 0x08020020U, 0x08000000U, 0x00020000U, 0x08000820U,
+  0x00000000U, 0x08020820U, 0x00020020U, 0x08000020U, 0x08020000U, 0x08000800U, 0x08000820U, 0x00000000U,
+  0x08020820U, 0x00020800U, 0x00020800U, 0x00000820U, 0x00000820U, 0x00020020U, 0x08000000U, 0x08020800U
+};
+
+/* Permuted Choice 1 (PC-1) matrices */
+static const uint8_t PC1_C[28] = {
+  57, 49, 41, 33, 25, 17, 9,
+   1, 58, 50, 42, 34, 26, 18,
+  10,  2, 59, 51, 43, 35, 27,
+  19, 11,  3, 60, 52, 44, 36
+};
+
+static const uint8_t PC1_D[28] = {
+  63, 55, 47, 39, 31, 23, 15,
+   7, 62, 54, 46, 38, 30, 22,
+  14,  6, 61, 53, 45, 37, 29,
+  21, 13,  5, 28, 20, 12,  4
+};
+
+/* Permuted Choice 2 (PC-2) matrix */
+static const uint8_t PC2[48] = {
+  14, 17, 11, 24,  1,  5,  3, 28, 15,  6, 21, 10,
+  23, 19, 12,  4, 26,  8, 16,  7, 27, 20, 13,  2,
+  41, 52, 31, 37, 47, 55, 30, 40, 51, 45, 33, 48,
+  44, 49, 39, 56, 34, 53, 46, 42, 50, 36, 29, 32
+};
+
+/* Subkey Left Shift Schedule */
+static const uint8_t SHIFTS[16] = {
+  1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1
+};
+
+/*****************************************************************************/
+/* Private Helper Functions                                                  */
+/*****************************************************************************/
+
+static inline uint8_t get_key_bit(const uint8_t* key, uint8_t bit_1based)
+{
+  uint8_t byte_idx = (uint8_t)((bit_1based - 1) / 8);
+  uint8_t bit_idx  = (uint8_t)(7 - ((bit_1based - 1) % 8));
+  return (key[byte_idx] >> bit_idx) & 1U;
+}
+
+/* Single DES key schedule calculation */
+static void des_key_schedule(uint32_t (*sk)[2], const uint8_t* key)
+{
+  uint32_t C = 0;
+  uint32_t D = 0;
+
+  for (uint8_t i = 0; i < 28; ++i)
+  {
+    C = (C << 1) | get_key_bit(key, PC1_C[i]);
+    D = (D << 1) | get_key_bit(key, PC1_D[i]);
+  }
+
+  for (uint8_t r = 0; r < 16; ++r)
+  {
+    uint8_t shift = SHIFTS[r];
+    C = ((C << shift) | (C >> (28 - shift))) & 0x0FFFFFFFU;
+    D = ((D << shift) | (D >> (28 - shift))) & 0x0FFFFFFFU;
+
+    uint64_t CD = ((uint64_t)C << 28) | D;
+    uint64_t key48 = 0;
+
+    for (uint8_t i = 0; i < 48; ++i)
+    {
+      uint8_t bit_pos = PC2[i];
+      uint8_t bit_val = (uint8_t)((CD >> (56 - bit_pos)) & 1U);
+      key48 = (key48 << 1) | bit_val;
+    }
+
+    uint8_t sk8[8];
+    sk8[0] = (uint8_t)((key48 >> 42) & 0x3FU);
+    sk8[1] = (uint8_t)((key48 >> 36) & 0x3FU);
+    sk8[2] = (uint8_t)((key48 >> 30) & 0x3FU);
+    sk8[3] = (uint8_t)((key48 >> 24) & 0x3FU);
+    sk8[4] = (uint8_t)((key48 >> 18) & 0x3FU);
+    sk8[5] = (uint8_t)((key48 >> 12) & 0x3FU);
+    sk8[6] = (uint8_t)((key48 >> 6)  & 0x3FU);
+    sk8[7] = (uint8_t)( key48        & 0x3FU);
+
+    sk[r][0] = ((uint32_t)sk8[0] << 24) | ((uint32_t)sk8[1] << 16) | ((uint32_t)sk8[2] << 8) | sk8[3];
+    sk[r][1] = ((uint32_t)sk8[4] << 24) | ((uint32_t)sk8[5] << 16) | ((uint32_t)sk8[6] << 8) | sk8[7];
+  }
+}
+
+/* Fast 32-bit Outerbridge Initial Permutation (IP) */
+static inline void des_IP(uint32_t* pL, uint32_t* pR)
+{
+  uint32_t L = *pL;
+  uint32_t R = *pR;
+  uint32_t t;
+
+  t = ((L >> 4) ^ R) & 0x0F0F0F0FU;
+  R ^= t;
+  L ^= (t << 4);
+
+  t = ((L >> 16) ^ R) & 0x0000FFFFU;
+  R ^= t;
+  L ^= (t << 16);
+
+  t = ((R >> 2) ^ L) & 0x33333333U;
+  L ^= t;
+  R ^= (t << 2);
+
+  t = ((R >> 8) ^ L) & 0x00FF00FFU;
+  L ^= t;
+  R ^= (t << 8);
+
+  t = ((L >> 1) ^ R) & 0x55555555U;
+  R ^= t;
+  L ^= (t << 1);
+
+  *pL = L;
+  *pR = R;
+}
+
+/* Fast 32-bit Outerbridge Final Permutation (FP = IP^-1) */
+static inline void des_FP(uint32_t* pL, uint32_t* pR)
+{
+  uint32_t L = *pL;
+  uint32_t R = *pR;
+  uint32_t t;
+
+  t = ((R >> 1) ^ L) & 0x55555555U;
+  L ^= t;
+  R ^= (t << 1);
+
+  t = ((L >> 8) ^ R) & 0x00FF00FFU;
+  R ^= t;
+  L ^= (t << 8);
+
+  t = ((L >> 2) ^ R) & 0x33333333U;
+  R ^= t;
+  L ^= (t << 2);
+
+  t = ((R >> 16) ^ L) & 0x0000FFFFU;
+  L ^= t;
+  R ^= (t << 16);
+
+  t = ((R >> 4) ^ L) & 0x0F0F0F0FU;
+  L ^= t;
+  R ^= (t << 4);
+
+  *pL = L;
+  *pR = R;
+}
+
+/* Single DES block cipher core */
+static void des_cipher_block(const uint32_t (*sk)[2], uint8_t* buf, int decrypt)
+{
+  uint32_t L = ((uint32_t)buf[0] << 24) | ((uint32_t)buf[1] << 16) | ((uint32_t)buf[2] << 8) | buf[3];
+  uint32_t R = ((uint32_t)buf[4] << 24) | ((uint32_t)buf[5] << 16) | ((uint32_t)buf[6] << 8) | buf[7];
+
+  des_IP(&L, &R);
+
+  for (int i = 0; i < 16; ++i)
+  {
+    int r = decrypt ? (15 - i) : i;
+
+    uint32_t sk_w0 = sk[r][0];
+    uint32_t sk_w1 = sk[r][1];
+
+    uint8_t sk8_0 = (uint8_t)(sk_w0 >> 24);
+    uint8_t sk8_1 = (uint8_t)(sk_w0 >> 16);
+    uint8_t sk8_2 = (uint8_t)(sk_w0 >> 8);
+    uint8_t sk8_3 = (uint8_t)(sk_w0);
+
+    uint8_t sk8_4 = (uint8_t)(sk_w1 >> 24);
+    uint8_t sk8_5 = (uint8_t)(sk_w1 >> 16);
+    uint8_t sk8_6 = (uint8_t)(sk_w1 >> 8);
+    uint8_t sk8_7 = (uint8_t)(sk_w1);
+
+    uint8_t b1 = (uint8_t)((((R & 1U) << 5) | ((R >> 27) & 0x1FU)) ^ sk8_0);
+    uint8_t b2 = (uint8_t)(((R >> 23) & 0x3FU) ^ sk8_1);
+    uint8_t b3 = (uint8_t)(((R >> 19) & 0x3FU) ^ sk8_2);
+    uint8_t b4 = (uint8_t)(((R >> 15) & 0x3FU) ^ sk8_3);
+    uint8_t b5 = (uint8_t)(((R >> 11) & 0x3FU) ^ sk8_4);
+    uint8_t b6 = (uint8_t)(((R >> 7)  & 0x3FU) ^ sk8_5);
+    uint8_t b7 = (uint8_t)(((R >> 3)  & 0x3FU) ^ sk8_6);
+    uint8_t b8 = (uint8_t)((((R & 0x1FU) << 1) | ((R >> 31) & 1U)) ^ sk8_7);
+
+    uint32_t f_res = SP1[b1] ^ SP2[b2] ^ SP3[b3] ^ SP4[b4] ^ SP5[b5] ^ SP6[b6] ^ SP7[b7] ^ SP8[b8];
+
+    uint32_t L_next = R;
+    uint32_t R_next = L ^ f_res;
+    L = L_next;
+    R = R_next;
+  }
+
+  des_FP(&L, &R);
+
+  buf[0] = (uint8_t)(R >> 24);
+  buf[1] = (uint8_t)(R >> 16);
+  buf[2] = (uint8_t)(R >> 8);
+  buf[3] = (uint8_t)(R);
+  buf[4] = (uint8_t)(L >> 24);
+  buf[5] = (uint8_t)(L >> 16);
+  buf[6] = (uint8_t)(L >> 8);
+  buf[7] = (uint8_t)(L);
+}
+
+#if (defined(CTR) && (CTR == 1))
+static void increment_iv(uint8_t* iv)
+{
+  for (int i = DES_BLOCKLEN - 1; i >= 0; --i)
+  {
+    if (++iv[i] != 0)
+      break;
+  }
+}
+#endif
+
+/*****************************************************************************/
+/* Public Functions: Single DES                                              */
+/*****************************************************************************/
+
+void DES_init_ctx(struct DES_ctx* ctx, const uint8_t* key)
+{
+  des_key_schedule(ctx->Sk, key);
+}
+
+#if (defined(CBC) && (CBC == 1)) || (defined(CTR) && (CTR == 1))
+void DES_init_ctx_iv(struct DES_ctx* ctx, const uint8_t* key, const uint8_t* iv)
+{
+  des_key_schedule(ctx->Sk, key);
+  memcpy(ctx->Iv, iv, DES_BLOCKLEN);
+}
+
+void DES_ctx_set_iv(struct DES_ctx* ctx, const uint8_t* iv)
+{
+  memcpy(ctx->Iv, iv, DES_BLOCKLEN);
+}
+#endif
+
+#if defined(ECB) && (ECB == 1)
+void DES_ECB_encrypt(const struct DES_ctx* ctx, uint8_t* buf)
+{
+  des_cipher_block(ctx->Sk, buf, 0);
+}
+
+void DES_ECB_decrypt(const struct DES_ctx* ctx, uint8_t* buf)
+{
+  des_cipher_block(ctx->Sk, buf, 1);
+}
+#endif
+
+#if defined(CBC) && (CBC == 1)
+void DES_CBC_encrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length)
+{
+  for (size_t i = 0; i < length; i += DES_BLOCKLEN)
+  {
+    for (uint8_t j = 0; j < DES_BLOCKLEN; ++j)
+    {
+      buf[i + j] ^= ctx->Iv[j];
+    }
+    des_cipher_block(ctx->Sk, buf + i, 0);
+    memcpy(ctx->Iv, buf + i, DES_BLOCKLEN);
+  }
+}
+
+void DES_CBC_decrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length)
+{
+  uint8_t store[DES_BLOCKLEN];
+  for (size_t i = 0; i < length; i += DES_BLOCKLEN)
+  {
+    memcpy(store, buf + i, DES_BLOCKLEN);
+    des_cipher_block(ctx->Sk, buf + i, 1);
+    for (uint8_t j = 0; j < DES_BLOCKLEN; ++j)
+    {
+      buf[i + j] ^= ctx->Iv[j];
+    }
+    memcpy(ctx->Iv, store, DES_BLOCKLEN);
+  }
+}
+#endif
+
+#if defined(CTR) && (CTR == 1)
+void DES_CTR_xcrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length)
+{
+  uint8_t buffer[DES_BLOCKLEN];
+  size_t i = 0;
+
+  for (; i < length; i += DES_BLOCKLEN)
+  {
+    memcpy(buffer, ctx->Iv, DES_BLOCKLEN);
+    des_cipher_block(ctx->Sk, buffer, 0);
+
+    size_t block_bytes = (length - i < DES_BLOCKLEN) ? (length - i) : DES_BLOCKLEN;
+    for (size_t bi = 0; bi < block_bytes; ++bi)
+    {
+      buf[i + bi] ^= buffer[bi];
+    }
+    increment_iv(ctx->Iv);
+  }
+}
+#endif
+
+/*****************************************************************************/
+/* Public Functions: Triple DES (3DES / TDES)                                */
+/*****************************************************************************/
+
+#if defined(TDES) && (TDES == 1)
+
+void DES3_init_ctx(struct DES3_ctx* ctx, const uint8_t* key, size_t keylen)
+{
+  des_key_schedule(&ctx->Sk[0], key);
+  if (keylen == 16)
+  {
+    /* 2-Key 3DES: K1, K2, K1 */
+    des_key_schedule(&ctx->Sk[16], key + 8);
+    des_key_schedule(&ctx->Sk[32], key);
+  }
+  else
+  {
+    /* 3-Key 3DES: K1, K2, K3 */
+    des_key_schedule(&ctx->Sk[16], key + 8);
+    des_key_schedule(&ctx->Sk[32], key + 16);
+  }
+}
+
+#if (defined(CBC) && (CBC == 1)) || (defined(CTR) && (CTR == 1))
+void DES3_init_ctx_iv(struct DES3_ctx* ctx, const uint8_t* key, size_t keylen, const uint8_t* iv)
+{
+  DES3_init_ctx(ctx, key, keylen);
+  memcpy(ctx->Iv, iv, DES_BLOCKLEN);
+}
+
+void DES3_ctx_set_iv(struct DES3_ctx* ctx, const uint8_t* iv)
+{
+  memcpy(ctx->Iv, iv, DES_BLOCKLEN);
+}
+#endif
+
+/* 3DES Core Encryption: E(K3) -> D(K2) -> E(K1) */
+static void des3_encrypt_block(const struct DES3_ctx* ctx, uint8_t* buf)
+{
+  des_cipher_block(&ctx->Sk[0],  buf, 0); /* Encrypt K1 */
+  des_cipher_block(&ctx->Sk[16], buf, 1); /* Decrypt K2 */
+  des_cipher_block(&ctx->Sk[32], buf, 0); /* Encrypt K3 */
+}
+
+/* 3DES Core Decryption: D(K1) -> E(K2) -> D(K3) */
+static void des3_decrypt_block(const struct DES3_ctx* ctx, uint8_t* buf)
+{
+  des_cipher_block(&ctx->Sk[32], buf, 1); /* Decrypt K3 */
+  des_cipher_block(&ctx->Sk[16], buf, 0); /* Encrypt K2 */
+  des_cipher_block(&ctx->Sk[0],  buf, 1); /* Decrypt K1 */
+}
+
+#if defined(ECB) && (ECB == 1)
+void DES3_ECB_encrypt(const struct DES3_ctx* ctx, uint8_t* buf)
+{
+  des3_encrypt_block(ctx, buf);
+}
+
+void DES3_ECB_decrypt(const struct DES3_ctx* ctx, uint8_t* buf)
+{
+  des3_decrypt_block(ctx, buf);
+}
+#endif
+
+#if defined(CBC) && (CBC == 1)
+void DES3_CBC_encrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length)
+{
+  for (size_t i = 0; i < length; i += DES_BLOCKLEN)
+  {
+    for (uint8_t j = 0; j < DES_BLOCKLEN; ++j)
+    {
+      buf[i + j] ^= ctx->Iv[j];
+    }
+    des3_encrypt_block(ctx, buf + i);
+    memcpy(ctx->Iv, buf + i, DES_BLOCKLEN);
+  }
+}
+
+void DES3_CBC_decrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length)
+{
+  uint8_t store[DES_BLOCKLEN];
+  for (size_t i = 0; i < length; i += DES_BLOCKLEN)
+  {
+    memcpy(store, buf + i, DES_BLOCKLEN);
+    des3_decrypt_block(ctx, buf + i);
+    for (uint8_t j = 0; j < DES_BLOCKLEN; ++j)
+    {
+      buf[i + j] ^= ctx->Iv[j];
+    }
+    memcpy(ctx->Iv, store, DES_BLOCKLEN);
+  }
+}
+#endif
+
+#if defined(CTR) && (CTR == 1)
+void DES3_CTR_xcrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length)
+{
+  uint8_t buffer[DES_BLOCKLEN];
+  size_t i = 0;
+
+  for (; i < length; i += DES_BLOCKLEN)
+  {
+    memcpy(buffer, ctx->Iv, DES_BLOCKLEN);
+    des3_encrypt_block(ctx, buffer);
+
+    size_t block_bytes = (length - i < DES_BLOCKLEN) ? (length - i) : DES_BLOCKLEN;
+    for (size_t bi = 0; bi < block_bytes; ++bi)
+    {
+      buf[i + bi] ^= buffer[bi];
+    }
+    increment_iv(ctx->Iv);
+  }
+}
+#endif
+
+#endif /* #if defined(TDES) && (TDES == 1) */
+
+/*****************************************************************************/
+/* Public Functions: DES / 3DES CMAC (NIST SP 800-38B)                      */
+/*****************************************************************************/
+
+static void cmac_shift_left(const uint8_t* input, uint8_t* output)
+{
+  uint8_t overflow = 0;
+  for (int i = 7; i >= 0; --i)
+  {
+    output[i] = (input[i] << 1) | overflow;
+    overflow = (input[i] & 0x80U) ? 1U : 0U;
+  }
+}
+
+static void cmac_generate_subkeys(const uint8_t* key, size_t keylen, uint8_t* k1, uint8_t* k2)
+{
+  static const uint8_t const_Rb = 0x1BU;
+  uint8_t L[DES_BLOCKLEN] = {0};
+
+  if (keylen == 8)
+  {
+    struct DES_ctx ctx;
+    DES_init_ctx(&ctx, key);
+    DES_ECB_encrypt(&ctx, L);
+  }
+  else
+  {
+    struct DES3_ctx ctx;
+    DES3_init_ctx(&ctx, key, keylen);
+    DES3_ECB_encrypt(&ctx, L);
+  }
+
+  cmac_shift_left(L, k1);
+  if (L[0] & 0x80U)
+  {
+    k1[7] ^= const_Rb;
+  }
+
+  cmac_shift_left(k1, k2);
+  if (k1[0] & 0x80U)
+  {
+    k2[7] ^= const_Rb;
+  }
+}
+
+int DES_cmac_with_iv(const uint8_t* key, size_t keylen, const uint8_t* message, size_t message_len, const uint8_t* iv, uint8_t* cmac_out)
+{
+  if (keylen != 8 && keylen != 16 && keylen != 24)
+  {
+    return -1;
+  }
+
+  uint8_t k1[DES_BLOCKLEN];
+  uint8_t k2[DES_BLOCKLEN];
+  cmac_generate_subkeys(key, keylen, k1, k2);
+
+  size_t n_blocks = (message_len + DES_BLOCKLEN - 1) / DES_BLOCKLEN;
+  int is_complete = 1;
+  if (n_blocks == 0)
+  {
+    n_blocks = 1;
+    is_complete = 0;
+  }
+  else
+  {
+    is_complete = (message_len % DES_BLOCKLEN == 0);
+  }
+
+  uint8_t last_block[DES_BLOCKLEN] = {0};
+  size_t last_idx = n_blocks - 1;
+
+  if (is_complete)
+  {
+    memcpy(last_block, message + (last_idx * DES_BLOCKLEN), DES_BLOCKLEN);
+    for (uint8_t i = 0; i < DES_BLOCKLEN; ++i)
+    {
+      last_block[i] ^= k1[i];
+    }
+  }
+  else
+  {
+    size_t rem = message_len % DES_BLOCKLEN;
+    if (rem > 0)
+    {
+      memcpy(last_block, message + (last_idx * DES_BLOCKLEN), rem);
+    }
+    last_block[rem] = 0x80U;
+    for (uint8_t i = 0; i < DES_BLOCKLEN; ++i)
+    {
+      last_block[i] ^= k2[i];
+    }
+  }
+
+  uint8_t current_iv[DES_BLOCKLEN];
+  if (iv)
+  {
+    memcpy(current_iv, iv, DES_BLOCKLEN);
+  }
+  else
+  {
+    memset(current_iv, 0, DES_BLOCKLEN);
+  }
+
+  if (keylen == 8)
+  {
+    struct DES_ctx ctx;
+    DES_init_ctx_iv(&ctx, key, current_iv);
+    for (size_t i = 0; i < last_idx; ++i)
+    {
+      uint8_t block[DES_BLOCKLEN];
+      memcpy(block, message + (i * DES_BLOCKLEN), DES_BLOCKLEN);
+      DES_CBC_encrypt_buffer(&ctx, block, DES_BLOCKLEN);
+    }
+    DES_CBC_encrypt_buffer(&ctx, last_block, DES_BLOCKLEN);
+  }
+  else
+  {
+    struct DES3_ctx ctx;
+    DES3_init_ctx_iv(&ctx, key, keylen, current_iv);
+    for (size_t i = 0; i < last_idx; ++i)
+    {
+      uint8_t block[DES_BLOCKLEN];
+      memcpy(block, message + (i * DES_BLOCKLEN), DES_BLOCKLEN);
+      DES3_CBC_encrypt_buffer(&ctx, block, DES_BLOCKLEN);
+    }
+    DES3_CBC_encrypt_buffer(&ctx, last_block, DES_BLOCKLEN);
+  }
+
+  memcpy(cmac_out, last_block, DES_BLOCKLEN);
+  return 0;
+}
+
+int DES_cmac(const uint8_t* key, size_t keylen, const uint8_t* message, size_t message_len, uint8_t* cmac_out)
+{
+  uint8_t zero_iv[DES_BLOCKLEN] = {0};
+  return DES_cmac_with_iv(key, keylen, message, message_len, zero_iv, cmac_out);
+}
+

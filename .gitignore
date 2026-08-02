@@ -1,0 +1,22 @@
+# Build & Compiled artifacts
+*.o
+*.a
+*.so
+*.dylib
+*.dll
+test_des
+test_cpp
+build/
+
+# Coverage files
+*.gcda
+*.gcno
+*.profraw
+*.profdata
+default.profraw
+default.profdata
+
+# IDE / OS junk
+.DS_Store
+.vscode/
+.idea/
