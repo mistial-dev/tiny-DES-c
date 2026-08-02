@@ -100,11 +100,11 @@ $(TEST_BUILD_DIR)/cavp.o: cavp.c des.h munit.h
 	mkdir -p $(TEST_BUILD_DIR)
 	$(CC) $(CFLAGS) $(TEST_DEFINITIONS) -c cavp.c -o $@
 
-test_vectors.h: generate_test_vectors.py
-	$(PYTHON) $<
-
-edge_vectors.h: generate_edge_vectors.py
-	$(PYTHON) $<
+# Checked-in headers are the default; regenerate only on demand (needs cryptography/OpenSSL).
+.PHONY: regenerate-vectors
+regenerate-vectors:
+	$(PYTHON) generate_test_vectors.py
+	$(PYTHON) generate_edge_vectors.py
 
 test: $(TEST_BUILD_DIR)/des-test.o $(TEST_BUILD_DIR)/munit.o $(TEST_BUILD_DIR)/test.o $(TEST_BUILD_DIR)/edge_vectors.o
 	@set -e; \
