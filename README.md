@@ -7,6 +7,7 @@ SPDX-License-Identifier: Unlicense
 [![CI](https://github.com/mistial-dev/tiny-DES-c/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/mistial-dev/tiny-DES-c/actions/workflows/ci.yml)
 [![C99](https://img.shields.io/badge/C-99-00599C?logo=c&logoColor=white)](https://en.cppreference.com/w/c/language)
 [![Heap-free](https://img.shields.io/badge/heap-free-informational)](#overview)
+[![Bounded Contribution Policy](https://img.shields.io/badge/Contribution%20Policy-Bounded-blue)](https://github.com/OpenPhysical/BoundedContributionPolicy)
 
 # Tiny DES / Triple-DES in C
 
@@ -226,6 +227,12 @@ add_subdirectory(path/to/tiny-DES-c)
 target_link_libraries(your_target PRIVATE tiny-des-c)
 ```
 
+## Contributing
+
+This project uses the [Bounded Contribution Policy](CODE_OF_CONDUCT.md) to keep
+discussions and contributions focused on technical goals. See
+[CONTRIBUTING.md](CONTRIBUTING.md) for build/test expectations and PR guidance.
+
 ## Credits
 
 - **Sibling project:** [mistial-dev/tiny-AES-c](https://github.com/mistial-dev/tiny-AES-c)
@@ -233,6 +240,8 @@ target_link_libraries(your_target PRIVATE tiny-des-c)
 - **Inspiration:** [kokke/tiny-AES-c](https://github.com/kokke/tiny-AES-c)—the
   original small, zero-allocation, single-file AES implementation model.
 - Unit testing framework: [µunit (munit)](https://nemequ.github.io/munit/).
+- Contribution policy:
+  [OpenPhysical BoundedContributionPolicy](https://github.com/OpenPhysical/BoundedContributionPolicy).
 
 ## License
 
