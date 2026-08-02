@@ -10,14 +10,19 @@ SPDX-License-Identifier: Unlicense
 
 # Tiny DES / Triple-DES in C
 
-Heap-free DES and Triple-DES (3DES / TDES) for constrained targets. Designed
-as a sibling of [tiny-AES-c](https://github.com/kokke/tiny-AES-c) (and the
-Mistial Dev fork’s modernized API style): small binary, low RAM, no heap,
-compile-time mode selection.
+Heap-free DES and Triple-DES (3DES / TDES) for constrained targets. This project
+is a **sibling** of
+[mistial-dev/tiny-AES-c](https://github.com/mistial-dev/tiny-AES-c)—same
+MCU-oriented priorities (small binary, low RAM, no heap, compile-time mode
+selection, fallible status codes, opt-in features) and the same general layout
+and tooling. It is **inspired by**
+[kokke/tiny-AES-c](https://github.com/kokke/tiny-AES-c), the original tiny,
+portable block-cipher engine style that both libraries follow.
 
 **DES is cryptographically broken for confidentiality. 3DES is legacy.** Prefer
-AES (e.g. tiny-AES-c) for new designs. This library is for interoperability and
-legacy protocols that still require DES/TDEA.
+AES ([tiny-AES-c](https://github.com/mistial-dev/tiny-AES-c)) for new designs.
+This library is for interoperability and legacy protocols that still require
+DES/TDEA.
 
 ## Overview
 
@@ -223,7 +228,10 @@ target_link_libraries(your_target PRIVATE tiny-des-c)
 
 ## Credits
 
-- Architectural sibling of [tiny-AES-c](https://github.com/kokke/tiny-AES-c) by kokke.
+- **Sibling project:** [mistial-dev/tiny-AES-c](https://github.com/mistial-dev/tiny-AES-c)
+  (API shape, defaults philosophy, test/CAVP style, MCU docs).
+- **Inspiration:** [kokke/tiny-AES-c](https://github.com/kokke/tiny-AES-c)—the
+  original small, zero-allocation, single-file AES implementation model.
 - Unit testing framework: [µunit (munit)](https://nemequ.github.io/munit/).
 
 ## License

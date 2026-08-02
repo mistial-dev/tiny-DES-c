@@ -91,4 +91,4 @@ jobs:
       if: runner.os == 'Linux' && matrix.compiler == 'gcc'
       run: |
         pip install --upgrade platformio
-        pio ci --lib="." --board=uno --board=esp32dev --board=nucleo_f401re examples/ctr_smoke.c
+        pio ci --lib="." --board=uno --board=esp32dev --board=nucleo_f401re examples/ctr_smoke.cpp

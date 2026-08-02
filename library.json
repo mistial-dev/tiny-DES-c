@@ -13,7 +13,7 @@
     },
     "frameworks": "*",
     "platforms": "*",
-    "examples": "examples/ctr_smoke.c",
+    "examples": "examples/ctr_smoke.cpp",
     "build":
     {
         "srcFilter": "+<des.c> +<des.h> +<des.hpp>"
