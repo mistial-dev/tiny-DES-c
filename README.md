@@ -38,18 +38,18 @@ void DES_ctx_set_iv(struct DES_ctx* ctx, const uint8_t* iv);
 void DES_ECB_encrypt(const struct DES_ctx* ctx, uint8_t* buf);
 void DES_ECB_decrypt(const struct DES_ctx* ctx, uint8_t* buf);
 
-void DES_CBC_encrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length);
-void DES_CBC_decrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length);
+void DES_CBC_encrypt(struct DES_ctx* ctx, uint8_t* buf, size_t length);
+void DES_CBC_decrypt(struct DES_ctx* ctx, uint8_t* buf, size_t length);
 
-void DES_CTR_xcrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length);
+void DES_CTR_crypt(struct DES_ctx* ctx, uint8_t* buf, size_t length);
 
-void DES_CFB64_encrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length);
-void DES_CFB64_decrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length);
-void DES_CFB8_encrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length);
-void DES_CFB8_decrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length);
-void DES_CFB1_encrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t bit_length);
-void DES_CFB1_decrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t bit_length);
-void DES_OFB_xcrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length);
+void DES_CFB64_encrypt(struct DES_ctx* ctx, uint8_t* buf, size_t length);
+void DES_CFB64_decrypt(struct DES_ctx* ctx, uint8_t* buf, size_t length);
+void DES_CFB8_encrypt(struct DES_ctx* ctx, uint8_t* buf, size_t length);
+void DES_CFB8_decrypt(struct DES_ctx* ctx, uint8_t* buf, size_t length);
+void DES_CFB1_encrypt(struct DES_ctx* ctx, uint8_t* buf, size_t bit_length);
+void DES_CFB1_decrypt(struct DES_ctx* ctx, uint8_t* buf, size_t bit_length);
+void DES_OFB_crypt(struct DES_ctx* ctx, uint8_t* buf, size_t length);
 
 /* --- Triple DES (3DES / TDES) --- */
 void DES3_init_ctx(struct DES3_ctx* ctx, const uint8_t* key, size_t keylen);
@@ -59,18 +59,18 @@ void DES3_ctx_set_iv(struct DES3_ctx* ctx, const uint8_t* iv);
 void DES3_ECB_encrypt(const struct DES3_ctx* ctx, uint8_t* buf);
 void DES3_ECB_decrypt(const struct DES3_ctx* ctx, uint8_t* buf);
 
-void DES3_CBC_encrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length);
-void DES3_CBC_decrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length);
+void DES3_CBC_encrypt(struct DES3_ctx* ctx, uint8_t* buf, size_t length);
+void DES3_CBC_decrypt(struct DES3_ctx* ctx, uint8_t* buf, size_t length);
 
-void DES3_CTR_xcrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length);
+void DES3_CTR_crypt(struct DES3_ctx* ctx, uint8_t* buf, size_t length);
 
-void DES3_CFB64_encrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length);
-void DES3_CFB64_decrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length);
-void DES3_CFB8_encrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length);
-void DES3_CFB8_decrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length);
-void DES3_CFB1_encrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t bit_length);
-void DES3_CFB1_decrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t bit_length);
-void DES3_OFB_xcrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length);
+void DES3_CFB64_encrypt(struct DES3_ctx* ctx, uint8_t* buf, size_t length);
+void DES3_CFB64_decrypt(struct DES3_ctx* ctx, uint8_t* buf, size_t length);
+void DES3_CFB8_encrypt(struct DES3_ctx* ctx, uint8_t* buf, size_t length);
+void DES3_CFB8_decrypt(struct DES3_ctx* ctx, uint8_t* buf, size_t length);
+void DES3_CFB1_encrypt(struct DES3_ctx* ctx, uint8_t* buf, size_t bit_length);
+void DES3_CFB1_decrypt(struct DES3_ctx* ctx, uint8_t* buf, size_t bit_length);
+void DES3_OFB_crypt(struct DES3_ctx* ctx, uint8_t* buf, size_t length);
 
 /* --- CMAC --- */
 int  DES_cmac(const uint8_t* key, size_t keylen, const uint8_t* message, size_t message_len, uint8_t* cmac_out);

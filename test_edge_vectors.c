@@ -28,15 +28,15 @@ static MunitResult test_edge_vectors(const MunitParameter params[], void* data)
       if (strcmp(vector->mode, "ECB") == 0)
         DES_ECB_encrypt(&ctx, buffer);
       else if (strcmp(vector->mode, "CBC") == 0)
-        DES_CBC_encrypt_buffer(&ctx, buffer, vector->len);
+        DES_CBC_encrypt(&ctx, buffer, vector->len);
       else if (strcmp(vector->mode, "CFB1") == 0)
-        DES_CFB1_encrypt_buffer(&ctx, buffer, vector->bit_length);
+        DES_CFB1_encrypt(&ctx, buffer, vector->bit_length);
       else if (strcmp(vector->mode, "CFB8") == 0)
-        DES_CFB8_encrypt_buffer(&ctx, buffer, vector->len);
+        DES_CFB8_encrypt(&ctx, buffer, vector->len);
       else if (strcmp(vector->mode, "CFB64") == 0)
-        DES_CFB64_encrypt_buffer(&ctx, buffer, vector->len);
+        DES_CFB64_encrypt(&ctx, buffer, vector->len);
       else if (strcmp(vector->mode, "OFB") == 0)
-        DES_OFB_xcrypt_buffer(&ctx, buffer, vector->len);
+        DES_OFB_crypt(&ctx, buffer, vector->len);
       else
         munit_errorf("unknown DES edge-vector mode: %s", vector->mode);
     }
@@ -48,15 +48,15 @@ static MunitResult test_edge_vectors(const MunitParameter params[], void* data)
       if (strcmp(vector->mode, "ECB") == 0)
         DES3_ECB_encrypt(&ctx, buffer);
       else if (strcmp(vector->mode, "CBC") == 0)
-        DES3_CBC_encrypt_buffer(&ctx, buffer, vector->len);
+        DES3_CBC_encrypt(&ctx, buffer, vector->len);
       else if (strcmp(vector->mode, "CFB1") == 0)
-        DES3_CFB1_encrypt_buffer(&ctx, buffer, vector->bit_length);
+        DES3_CFB1_encrypt(&ctx, buffer, vector->bit_length);
       else if (strcmp(vector->mode, "CFB8") == 0)
-        DES3_CFB8_encrypt_buffer(&ctx, buffer, vector->len);
+        DES3_CFB8_encrypt(&ctx, buffer, vector->len);
       else if (strcmp(vector->mode, "CFB64") == 0)
-        DES3_CFB64_encrypt_buffer(&ctx, buffer, vector->len);
+        DES3_CFB64_encrypt(&ctx, buffer, vector->len);
       else if (strcmp(vector->mode, "OFB") == 0)
-        DES3_OFB_xcrypt_buffer(&ctx, buffer, vector->len);
+        DES3_OFB_crypt(&ctx, buffer, vector->len);
       else
         munit_errorf("unknown 3DES edge-vector mode: %s", vector->mode);
     }

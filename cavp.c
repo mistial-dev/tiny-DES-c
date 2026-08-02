@@ -178,30 +178,30 @@ static void cavp_apply(int mode, int encrypt, const uint8_t key[24],
       break;
     case CAVP_TCBC:
       if (encrypt)
-        DES3_CBC_encrypt_buffer(&ctx, buf, len);
+        DES3_CBC_encrypt(&ctx, buf, len);
       else
-        DES3_CBC_decrypt_buffer(&ctx, buf, len);
+        DES3_CBC_decrypt(&ctx, buf, len);
       break;
     case CAVP_TCFB1:
       if (encrypt)
-        DES3_CFB1_encrypt_buffer(&ctx, buf, len);
+        DES3_CFB1_encrypt(&ctx, buf, len);
       else
-        DES3_CFB1_decrypt_buffer(&ctx, buf, len);
+        DES3_CFB1_decrypt(&ctx, buf, len);
       break;
     case CAVP_TCFB8:
       if (encrypt)
-        DES3_CFB8_encrypt_buffer(&ctx, buf, len);
+        DES3_CFB8_encrypt(&ctx, buf, len);
       else
-        DES3_CFB8_decrypt_buffer(&ctx, buf, len);
+        DES3_CFB8_decrypt(&ctx, buf, len);
       break;
     case CAVP_TCFB64:
       if (encrypt)
-        DES3_CFB64_encrypt_buffer(&ctx, buf, len);
+        DES3_CFB64_encrypt(&ctx, buf, len);
       else
-        DES3_CFB64_decrypt_buffer(&ctx, buf, len);
+        DES3_CFB64_decrypt(&ctx, buf, len);
       break;
     default: /* CAVP_TOFB */
-      DES3_OFB_xcrypt_buffer(&ctx, buf, len);
+      DES3_OFB_crypt(&ctx, buf, len);
       break;
   }
 }

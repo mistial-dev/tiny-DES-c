@@ -69,21 +69,21 @@ static MunitResult test_des_cbc(const MunitParameter params[], void* data)
   /* KAT Encrypt */
   DES_init_ctx_iv(&ctx, des_test_key, des_cbc_iv);
   memcpy(buffer, des_test_pt, 8);
-  DES_CBC_encrypt_buffer(&ctx, buffer, 8);
+  DES_CBC_encrypt(&ctx, buffer, 8);
   munit_assert_memory_equal(8, buffer, des_cbc_ct);
 
   /* KAT Decrypt */
   DES_ctx_set_iv(&ctx, des_cbc_iv);
   memcpy(buffer, des_cbc_ct, 8);
-  DES_CBC_decrypt_buffer(&ctx, buffer, 8);
+  DES_CBC_decrypt(&ctx, buffer, 8);
   munit_assert_memory_equal(8, buffer, des_test_pt);
 
   /* Round-Trip */
   DES_ctx_set_iv(&ctx, des_cbc_iv);
-  DES_CBC_encrypt_buffer(&ctx, buffer, 8);
+  DES_CBC_encrypt(&ctx, buffer, 8);
   munit_assert_memory_equal(8, buffer, des_cbc_ct);
   DES_ctx_set_iv(&ctx, des_cbc_iv);
-  DES_CBC_decrypt_buffer(&ctx, buffer, 8);
+  DES_CBC_decrypt(&ctx, buffer, 8);
   munit_assert_memory_equal(8, buffer, des_test_pt);
 
   return MUNIT_OK;
@@ -103,12 +103,12 @@ static MunitResult test_des_ctr(const MunitParameter params[], void* data)
 
   /* Encrypt */
   DES_init_ctx_iv(&ctx, des_test_key, des_ctr_iv);
-  DES_CTR_xcrypt_buffer(&ctx, buffer, 20);
+  DES_CTR_crypt(&ctx, buffer, 20);
   munit_assert_memory_not_equal(20, buffer, original);
 
   /* Decrypt */
   DES_ctx_set_iv(&ctx, des_ctr_iv);
-  DES_CTR_xcrypt_buffer(&ctx, buffer, 20);
+  DES_CTR_crypt(&ctx, buffer, 20);
   munit_assert_memory_equal(20, buffer, original);
 
   return MUNIT_OK;
@@ -165,21 +165,21 @@ static MunitResult test_tdes2_cbc(const MunitParameter params[], void* data)
   /* KAT Encrypt */
   DES3_init_ctx_iv(&ctx, tdes2_key, 16, des_cbc_iv);
   memcpy(buffer, tdes2_pt, 16);
-  DES3_CBC_encrypt_buffer(&ctx, buffer, 16);
+  DES3_CBC_encrypt(&ctx, buffer, 16);
   munit_assert_memory_equal(16, buffer, tdes2_cbc_ct);
 
   /* KAT Decrypt */
   DES3_ctx_set_iv(&ctx, des_cbc_iv);
   memcpy(buffer, tdes2_cbc_ct, 16);
-  DES3_CBC_decrypt_buffer(&ctx, buffer, 16);
+  DES3_CBC_decrypt(&ctx, buffer, 16);
   munit_assert_memory_equal(16, buffer, tdes2_pt);
 
   /* Round-Trip */
   DES3_ctx_set_iv(&ctx, des_cbc_iv);
-  DES3_CBC_encrypt_buffer(&ctx, buffer, 16);
+  DES3_CBC_encrypt(&ctx, buffer, 16);
   munit_assert_memory_equal(16, buffer, tdes2_cbc_ct);
   DES3_ctx_set_iv(&ctx, des_cbc_iv);
-  DES3_CBC_decrypt_buffer(&ctx, buffer, 16);
+  DES3_CBC_decrypt(&ctx, buffer, 16);
   munit_assert_memory_equal(16, buffer, tdes2_pt);
 
   return MUNIT_OK;
@@ -198,11 +198,11 @@ static MunitResult test_tdes2_ctr(const MunitParameter params[], void* data)
   memcpy(buffer, original, 24);
 
   DES3_init_ctx_iv(&ctx, tdes2_key, 16, des_ctr_iv);
-  DES3_CTR_xcrypt_buffer(&ctx, buffer, 24);
+  DES3_CTR_crypt(&ctx, buffer, 24);
   munit_assert_memory_not_equal(24, buffer, original);
 
   DES3_ctx_set_iv(&ctx, des_ctr_iv);
-  DES3_CTR_xcrypt_buffer(&ctx, buffer, 24);
+  DES3_CTR_crypt(&ctx, buffer, 24);
   munit_assert_memory_equal(24, buffer, original);
 
   return MUNIT_OK;
@@ -259,21 +259,21 @@ static MunitResult test_tdes3_cbc(const MunitParameter params[], void* data)
   /* KAT Encrypt */
   DES3_init_ctx_iv(&ctx, tdes3_key, 24, des_cbc_iv);
   memcpy(buffer, tdes3_pt, 16);
-  DES3_CBC_encrypt_buffer(&ctx, buffer, 16);
+  DES3_CBC_encrypt(&ctx, buffer, 16);
   munit_assert_memory_equal(16, buffer, tdes3_cbc_ct);
 
   /* KAT Decrypt */
   DES3_ctx_set_iv(&ctx, des_cbc_iv);
   memcpy(buffer, tdes3_cbc_ct, 16);
-  DES3_CBC_decrypt_buffer(&ctx, buffer, 16);
+  DES3_CBC_decrypt(&ctx, buffer, 16);
   munit_assert_memory_equal(16, buffer, tdes3_pt);
 
   /* Round-Trip */
   DES3_ctx_set_iv(&ctx, des_cbc_iv);
-  DES3_CBC_encrypt_buffer(&ctx, buffer, 16);
+  DES3_CBC_encrypt(&ctx, buffer, 16);
   munit_assert_memory_equal(16, buffer, tdes3_cbc_ct);
   DES3_ctx_set_iv(&ctx, des_cbc_iv);
-  DES3_CBC_decrypt_buffer(&ctx, buffer, 16);
+  DES3_CBC_decrypt(&ctx, buffer, 16);
   munit_assert_memory_equal(16, buffer, tdes3_pt);
 
   return MUNIT_OK;
@@ -292,11 +292,11 @@ static MunitResult test_tdes3_ctr(const MunitParameter params[], void* data)
   memcpy(buffer, original, 32);
 
   DES3_init_ctx_iv(&ctx, tdes3_key, 24, des_ctr_iv);
-  DES3_CTR_xcrypt_buffer(&ctx, buffer, 32);
+  DES3_CTR_crypt(&ctx, buffer, 32);
   munit_assert_memory_not_equal(32, buffer, original);
 
   DES3_ctx_set_iv(&ctx, des_ctr_iv);
-  DES3_CTR_xcrypt_buffer(&ctx, buffer, 32);
+  DES3_CTR_crypt(&ctx, buffer, 32);
   munit_assert_memory_equal(32, buffer, original);
 
   return MUNIT_OK;
@@ -319,12 +319,12 @@ static MunitResult test_des_ofb(const MunitParameter params[], void* data)
   /* KAT Encrypt */
   DES_init_ctx_iv(&ctx, des_test_key, des_cbc_iv);
   memcpy(buffer, des_test_pt, 8);
-  DES_OFB_xcrypt_buffer(&ctx, buffer, 8);
+  DES_OFB_crypt(&ctx, buffer, 8);
   munit_assert_memory_equal(8, buffer, des_ofb_ct);
 
   /* Decrypt is the same operation */
   DES_ctx_set_iv(&ctx, des_cbc_iv);
-  DES_OFB_xcrypt_buffer(&ctx, buffer, 8);
+  DES_OFB_crypt(&ctx, buffer, 8);
   munit_assert_memory_equal(8, buffer, des_test_pt);
 
   return MUNIT_OK;
@@ -341,11 +341,11 @@ static MunitResult test_des_cfb64(const MunitParameter params[], void* data)
 
   DES_init_ctx_iv(&ctx, des_test_key, des_cbc_iv);
   memcpy(buffer, des_test_pt, 8);
-  DES_CFB64_encrypt_buffer(&ctx, buffer, 8);
+  DES_CFB64_encrypt(&ctx, buffer, 8);
   munit_assert_memory_equal(8, buffer, des_cfb64_ct);
 
   DES_ctx_set_iv(&ctx, des_cbc_iv);
-  DES_CFB64_decrypt_buffer(&ctx, buffer, 8);
+  DES_CFB64_decrypt(&ctx, buffer, 8);
   munit_assert_memory_equal(8, buffer, des_test_pt);
 
   return MUNIT_OK;
@@ -362,11 +362,11 @@ static MunitResult test_des_cfb8(const MunitParameter params[], void* data)
 
   DES_init_ctx_iv(&ctx, des_test_key, des_cbc_iv);
   memcpy(buffer, des_test_pt, 8);
-  DES_CFB8_encrypt_buffer(&ctx, buffer, 8);
+  DES_CFB8_encrypt(&ctx, buffer, 8);
   munit_assert_memory_equal(8, buffer, des_cfb8_ct);
 
   DES_ctx_set_iv(&ctx, des_cbc_iv);
-  DES_CFB8_decrypt_buffer(&ctx, buffer, 8);
+  DES_CFB8_decrypt(&ctx, buffer, 8);
   munit_assert_memory_equal(8, buffer, des_test_pt);
 
   return MUNIT_OK;
@@ -388,13 +388,13 @@ static MunitResult test_des_cfb1(const MunitParameter params[], void* data)
 
   bits[0] = 0x00;
   DES_init_ctx_iv(&ctx, weak_key, iv0);
-  DES_CFB1_encrypt_buffer(&ctx, bits, 1);
+  DES_CFB1_encrypt(&ctx, bits, 1);
   munit_assert_uint8(bits[0] >> 7, ==, 1);
 
   /* COUNT 2: IV=2000000000000000 PT=0 -> CT=0 */
   bits[0] = 0x00;
   DES_ctx_set_iv(&ctx, iv2);
-  DES_CFB1_encrypt_buffer(&ctx, bits, 1);
+  DES_CFB1_encrypt(&ctx, bits, 1);
   munit_assert_uint8(bits[0] >> 7, ==, 0);
 
   /* Multi-bit roundtrip with an arbitrary key */
@@ -402,10 +402,10 @@ static MunitResult test_des_cfb1(const MunitParameter params[], void* data)
   uint8_t original[3];
   memcpy(original, stream, 3);
   DES_init_ctx_iv(&ctx, des_test_key, des_cbc_iv);
-  DES_CFB1_encrypt_buffer(&ctx, stream, 17);
+  DES_CFB1_encrypt(&ctx, stream, 17);
   munit_assert_memory_not_equal(3, stream, original);
   DES_ctx_set_iv(&ctx, des_cbc_iv);
-  DES_CFB1_decrypt_buffer(&ctx, stream, 17);
+  DES_CFB1_decrypt(&ctx, stream, 17);
   munit_assert_memory_equal(3, stream, original);
 
   return MUNIT_OK;
@@ -423,26 +423,26 @@ static MunitResult test_tdes3_feedback_modes(const MunitParameter params[], void
   /* OFB */
   DES3_init_ctx_iv(&ctx, tdes3_key, 24, des_cbc_iv);
   memcpy(buffer, tdes3_pt, 16);
-  DES3_OFB_xcrypt_buffer(&ctx, buffer, 16);
+  DES3_OFB_crypt(&ctx, buffer, 16);
   munit_assert_memory_equal(16, buffer, tdes3_ofb_ct);
   DES3_ctx_set_iv(&ctx, des_cbc_iv);
-  DES3_OFB_xcrypt_buffer(&ctx, buffer, 16);
+  DES3_OFB_crypt(&ctx, buffer, 16);
   munit_assert_memory_equal(16, buffer, tdes3_pt);
 
   /* CFB64 */
   DES3_ctx_set_iv(&ctx, des_cbc_iv);
-  DES3_CFB64_encrypt_buffer(&ctx, buffer, 16);
+  DES3_CFB64_encrypt(&ctx, buffer, 16);
   munit_assert_memory_equal(16, buffer, tdes3_cfb64_ct);
   DES3_ctx_set_iv(&ctx, des_cbc_iv);
-  DES3_CFB64_decrypt_buffer(&ctx, buffer, 16);
+  DES3_CFB64_decrypt(&ctx, buffer, 16);
   munit_assert_memory_equal(16, buffer, tdes3_pt);
 
   /* CFB8 */
   DES3_ctx_set_iv(&ctx, des_cbc_iv);
-  DES3_CFB8_encrypt_buffer(&ctx, buffer, 16);
+  DES3_CFB8_encrypt(&ctx, buffer, 16);
   munit_assert_memory_equal(16, buffer, tdes3_cfb8_ct);
   DES3_ctx_set_iv(&ctx, des_cbc_iv);
-  DES3_CFB8_decrypt_buffer(&ctx, buffer, 16);
+  DES3_CFB8_decrypt(&ctx, buffer, 16);
   munit_assert_memory_equal(16, buffer, tdes3_pt);
 
   /* CFB1 roundtrip (no host-generated KAT available; CAVP files cover KAT) */
@@ -450,9 +450,9 @@ static MunitResult test_tdes3_feedback_modes(const MunitParameter params[], void
   uint8_t original[2];
   memcpy(original, stream, 2);
   DES3_ctx_set_iv(&ctx, des_cbc_iv);
-  DES3_CFB1_encrypt_buffer(&ctx, stream, 10);
+  DES3_CFB1_encrypt(&ctx, stream, 10);
   DES3_ctx_set_iv(&ctx, des_cbc_iv);
-  DES3_CFB1_decrypt_buffer(&ctx, stream, 10);
+  DES3_CFB1_decrypt(&ctx, stream, 10);
   munit_assert_memory_equal(2, stream, original);
 
   return MUNIT_OK;
@@ -472,40 +472,40 @@ static MunitResult test_feedback_mode_chaining(const MunitParameter params[], vo
   memcpy(oneshot, tdes3_pt, 16);
   memcpy(split, tdes3_pt, 16);
   DES3_init_ctx_iv(&ctx, tdes3_key, 24, des_cbc_iv);
-  DES3_CFB64_encrypt_buffer(&ctx, oneshot, 16);
+  DES3_CFB64_encrypt(&ctx, oneshot, 16);
   DES3_ctx_set_iv(&ctx, des_cbc_iv);
-  DES3_CFB64_encrypt_buffer(&ctx, split, 8);
-  DES3_CFB64_encrypt_buffer(&ctx, split + 8, 8);
+  DES3_CFB64_encrypt(&ctx, split, 8);
+  DES3_CFB64_encrypt(&ctx, split + 8, 8);
   munit_assert_memory_equal(16, split, oneshot);
 
   /* CFB8 */
   memcpy(oneshot, tdes3_pt, 16);
   memcpy(split, tdes3_pt, 16);
   DES3_ctx_set_iv(&ctx, des_cbc_iv);
-  DES3_CFB8_encrypt_buffer(&ctx, oneshot, 16);
+  DES3_CFB8_encrypt(&ctx, oneshot, 16);
   DES3_ctx_set_iv(&ctx, des_cbc_iv);
-  DES3_CFB8_encrypt_buffer(&ctx, split, 5);
-  DES3_CFB8_encrypt_buffer(&ctx, split + 5, 11);
+  DES3_CFB8_encrypt(&ctx, split, 5);
+  DES3_CFB8_encrypt(&ctx, split + 5, 11);
   munit_assert_memory_equal(16, split, oneshot);
 
   /* OFB */
   memcpy(oneshot, tdes3_pt, 16);
   memcpy(split, tdes3_pt, 16);
   DES3_ctx_set_iv(&ctx, des_cbc_iv);
-  DES3_OFB_xcrypt_buffer(&ctx, oneshot, 16);
+  DES3_OFB_crypt(&ctx, oneshot, 16);
   DES3_ctx_set_iv(&ctx, des_cbc_iv);
-  DES3_OFB_xcrypt_buffer(&ctx, split, 8);
-  DES3_OFB_xcrypt_buffer(&ctx, split + 8, 8);
+  DES3_OFB_crypt(&ctx, split, 8);
+  DES3_OFB_crypt(&ctx, split + 8, 8);
   munit_assert_memory_equal(16, split, oneshot);
 
   /* CFB1: 16 bits one-shot vs two 8-bit calls (split only on byte boundaries) */
   uint8_t bits_oneshot[2] = {0x96, 0x3d};
   uint8_t bits_split[2] = {0x96, 0x3d};
   DES3_ctx_set_iv(&ctx, des_cbc_iv);
-  DES3_CFB1_encrypt_buffer(&ctx, bits_oneshot, 16);
+  DES3_CFB1_encrypt(&ctx, bits_oneshot, 16);
   DES3_ctx_set_iv(&ctx, des_cbc_iv);
-  DES3_CFB1_encrypt_buffer(&ctx, bits_split, 8);
-  DES3_CFB1_encrypt_buffer(&ctx, bits_split + 1, 8);
+  DES3_CFB1_encrypt(&ctx, bits_split, 8);
+  DES3_CFB1_encrypt(&ctx, bits_split + 1, 8);
   munit_assert_memory_equal(2, bits_split, bits_oneshot);
 
   return MUNIT_OK;

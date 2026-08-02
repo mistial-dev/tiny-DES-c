@@ -315,6 +315,52 @@ static void increment_iv(uint8_t* iv)
       break;
   }
 }
+
+/*
+ * Return 1 if at least `needed` big-endian counter blocks can be consumed
+ * without wrapping the 64-bit counter mid-request.
+ */
+static int ctr_blocks_until_wrap(const uint8_t iv[DES_BLOCKLEN], size_t needed)
+{
+  uint8_t remaining[DES_BLOCKLEN];
+  uint8_t bi;
+  size_t blocks;
+  uint8_t carry;
+  uint8_t all_zero = 1;
+
+  carry = 0;
+  for (bi = DES_BLOCKLEN; bi > 0; --bi)
+  {
+    const uint8_t idx = (uint8_t)(bi - 1u);
+    const unsigned diff = (unsigned)(0u - (unsigned)iv[idx] - (unsigned)carry);
+    remaining[idx] = (uint8_t)diff;
+    carry = (uint8_t)(iv[idx] != 0 || carry != 0 ? 1u : 0u);
+  }
+
+  for (bi = 0; bi < DES_BLOCKLEN; ++bi)
+  {
+    if (iv[bi] != 0)
+    {
+      all_zero = 0;
+      break;
+    }
+  }
+  if (all_zero)
+    return 1;
+
+  /* If any high byte of remaining is non-zero, remaining exceeds size_t range. */
+  for (bi = 0; bi + sizeof(size_t) < DES_BLOCKLEN; ++bi)
+  {
+    if (remaining[bi] != 0)
+      return 1;
+  }
+
+  blocks = 0;
+  for (bi = 0; bi < sizeof(size_t) && bi < DES_BLOCKLEN; ++bi)
+    blocks = (blocks << 8) | remaining[DES_BLOCKLEN - sizeof(size_t) + bi];
+
+  return blocks >= needed;
+}
 #endif
 
 /*****************************************************************************/
@@ -374,18 +420,33 @@ void DES_ctx_set_iv(struct DES_ctx* ctx, const uint8_t* iv)
 #if DES_ENABLE_ECB
 void DES_ECB_encrypt(const struct DES_ctx* ctx, uint8_t* buf)
 {
+#if DES_STRICT
+  if (ctx == NULL || buf == NULL)
+    return;
+#endif
   des_cipher_block(ctx->Sk, buf, 0);
 }
 
 void DES_ECB_decrypt(const struct DES_ctx* ctx, uint8_t* buf)
 {
+#if DES_STRICT
+  if (ctx == NULL || buf == NULL)
+    return;
+#endif
   des_cipher_block(ctx->Sk, buf, 1);
 }
 #endif
 
 #if DES_ENABLE_CBC
-void DES_CBC_encrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length)
+int DES_CBC_encrypt(struct DES_ctx* ctx, uint8_t* buf, size_t length)
 {
+#if DES_STRICT
+  if (ctx == NULL || (length != 0 && buf == NULL))
+    return DES_ERR;
+#endif
+  if ((length % DES_BLOCKLEN) != 0)
+    return DES_ERR;
+
   for (size_t i = 0; i < length; i += DES_BLOCKLEN)
   {
     for (uint8_t j = 0; j < DES_BLOCKLEN; ++j)
@@ -395,11 +456,19 @@ void DES_CBC_encrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length)
     des_cipher_block(ctx->Sk, buf + i, 0);
     memcpy(ctx->Iv, buf + i, DES_BLOCKLEN);
   }
+  return DES_OK;
 }
 
-void DES_CBC_decrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length)
+int DES_CBC_decrypt(struct DES_ctx* ctx, uint8_t* buf, size_t length)
 {
   uint8_t store[DES_BLOCKLEN];
+#if DES_STRICT
+  if (ctx == NULL || (length != 0 && buf == NULL))
+    return DES_ERR;
+#endif
+  if ((length % DES_BLOCKLEN) != 0)
+    return DES_ERR;
+
   for (size_t i = 0; i < length; i += DES_BLOCKLEN)
   {
     memcpy(store, buf + i, DES_BLOCKLEN);
@@ -410,14 +479,27 @@ void DES_CBC_decrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length)
     }
     memcpy(ctx->Iv, store, DES_BLOCKLEN);
   }
+  return DES_OK;
 }
 #endif
 
 #if DES_ENABLE_CTR
-void DES_CTR_xcrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length)
+int DES_CTR_crypt(struct DES_ctx* ctx, uint8_t* buf, size_t length)
 {
   uint8_t buffer[DES_BLOCKLEN];
   size_t i = 0;
+  size_t blocks_needed;
+
+#if DES_STRICT
+  if (ctx == NULL || (length != 0 && buf == NULL))
+    return DES_ERR;
+#endif
+  if (length == 0)
+    return DES_OK;
+
+  blocks_needed = length / DES_BLOCKLEN + ((length % DES_BLOCKLEN) != 0 ? 1u : 0u);
+  if (!ctr_blocks_until_wrap(ctx->Iv, blocks_needed))
+    return DES_ERR;
 
   for (; i < length; i += DES_BLOCKLEN)
   {
@@ -431,14 +513,33 @@ void DES_CTR_xcrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length)
     }
     increment_iv(ctx->Iv);
   }
+  return DES_OK;
 }
 #endif
 
 #if DES_ENABLE_CFB64
-void DES_CFB64_encrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length)
+/* CFB-64 allows a shorter final segment (SP 800-38A); shift rem ciphertext bytes into Iv. */
+static void cfb64_shift_iv(uint8_t* iv, const uint8_t* ct, size_t rem)
+{
+  if (rem >= DES_BLOCKLEN)
+  {
+    memcpy(iv, ct, DES_BLOCKLEN);
+    return;
+  }
+  memmove(iv, iv + rem, DES_BLOCKLEN - rem);
+  memcpy(iv + (DES_BLOCKLEN - rem), ct, rem);
+}
+
+int DES_CFB64_encrypt(struct DES_ctx* ctx, uint8_t* buf, size_t length)
 {
   uint8_t keystream[DES_BLOCKLEN];
-  for (size_t i = 0; i < length; i += DES_BLOCKLEN)
+  size_t i;
+#if DES_STRICT
+  if (ctx == NULL || (length != 0 && buf == NULL))
+    return DES_ERR;
+#endif
+
+  for (i = 0; i + DES_BLOCKLEN <= length; i += DES_BLOCKLEN)
   {
     memcpy(keystream, ctx->Iv, DES_BLOCKLEN);
     des_cipher_block(ctx->Sk, keystream, 0);
@@ -448,13 +549,31 @@ void DES_CFB64_encrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length)
     }
     memcpy(ctx->Iv, buf + i, DES_BLOCKLEN);
   }
+  if (i < length)
+  {
+    size_t rem = length - i;
+    memcpy(keystream, ctx->Iv, DES_BLOCKLEN);
+    des_cipher_block(ctx->Sk, keystream, 0);
+    for (size_t j = 0; j < rem; ++j)
+    {
+      buf[i + j] ^= keystream[j];
+    }
+    cfb64_shift_iv(ctx->Iv, buf + i, rem);
+  }
+  return DES_OK;
 }
 
-void DES_CFB64_decrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length)
+int DES_CFB64_decrypt(struct DES_ctx* ctx, uint8_t* buf, size_t length)
 {
   uint8_t keystream[DES_BLOCKLEN];
   uint8_t store[DES_BLOCKLEN];
-  for (size_t i = 0; i < length; i += DES_BLOCKLEN)
+  size_t i;
+#if DES_STRICT
+  if (ctx == NULL || (length != 0 && buf == NULL))
+    return DES_ERR;
+#endif
+
+  for (i = 0; i + DES_BLOCKLEN <= length; i += DES_BLOCKLEN)
   {
     memcpy(store, buf + i, DES_BLOCKLEN);
     memcpy(keystream, ctx->Iv, DES_BLOCKLEN);
@@ -466,13 +585,30 @@ void DES_CFB64_decrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length)
     }
     memcpy(ctx->Iv, store, DES_BLOCKLEN);
   }
+  if (i < length)
+  {
+    size_t rem = length - i;
+    memcpy(store, buf + i, rem);
+    memcpy(keystream, ctx->Iv, DES_BLOCKLEN);
+    des_cipher_block(ctx->Sk, keystream, 0);
+    for (size_t j = 0; j < rem; ++j)
+    {
+      buf[i + j] ^= keystream[j];
+    }
+    cfb64_shift_iv(ctx->Iv, store, rem);
+  }
+  return DES_OK;
 }
 #endif
 
 #if DES_ENABLE_CFB8
-void DES_CFB8_encrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length)
+int DES_CFB8_encrypt(struct DES_ctx* ctx, uint8_t* buf, size_t length)
 {
   uint8_t keystream[DES_BLOCKLEN];
+#if DES_STRICT
+  if (ctx == NULL || (length != 0 && buf == NULL))
+    return DES_ERR;
+#endif
   for (size_t i = 0; i < length; ++i)
   {
     memcpy(keystream, ctx->Iv, DES_BLOCKLEN);
@@ -481,11 +617,16 @@ void DES_CFB8_encrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length)
     memmove(ctx->Iv, ctx->Iv + 1, DES_BLOCKLEN - 1);
     ctx->Iv[DES_BLOCKLEN - 1] = buf[i];
   }
+  return DES_OK;
 }
 
-void DES_CFB8_decrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length)
+int DES_CFB8_decrypt(struct DES_ctx* ctx, uint8_t* buf, size_t length)
 {
   uint8_t keystream[DES_BLOCKLEN];
+#if DES_STRICT
+  if (ctx == NULL || (length != 0 && buf == NULL))
+    return DES_ERR;
+#endif
   for (size_t i = 0; i < length; ++i)
   {
     uint8_t c = buf[i];
@@ -495,6 +636,7 @@ void DES_CFB8_decrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length)
     memmove(ctx->Iv, ctx->Iv + 1, DES_BLOCKLEN - 1);
     ctx->Iv[DES_BLOCKLEN - 1] = c;
   }
+  return DES_OK;
 }
 #endif
 
@@ -509,9 +651,13 @@ static void cfb1_shift_iv(uint8_t* iv, uint8_t ct_bit)
   iv[DES_BLOCKLEN - 1] = (uint8_t)((iv[DES_BLOCKLEN - 1] << 1) | ct_bit);
 }
 
-void DES_CFB1_encrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t bit_length)
+int DES_CFB1_encrypt(struct DES_ctx* ctx, uint8_t* buf, size_t bit_length)
 {
   uint8_t keystream[DES_BLOCKLEN];
+#if DES_STRICT
+  if (ctx == NULL || (bit_length != 0 && buf == NULL))
+    return DES_ERR;
+#endif
   for (size_t i = 0; i < bit_length; ++i)
   {
     size_t byte_idx = i / 8;
@@ -522,11 +668,16 @@ void DES_CFB1_encrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t bit_lengt
     buf[byte_idx] = (uint8_t)((buf[byte_idx] & ~(1U << shift)) | (ct_bit << shift));
     cfb1_shift_iv(ctx->Iv, ct_bit);
   }
+  return DES_OK;
 }
 
-void DES_CFB1_decrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t bit_length)
+int DES_CFB1_decrypt(struct DES_ctx* ctx, uint8_t* buf, size_t bit_length)
 {
   uint8_t keystream[DES_BLOCKLEN];
+#if DES_STRICT
+  if (ctx == NULL || (bit_length != 0 && buf == NULL))
+    return DES_ERR;
+#endif
   for (size_t i = 0; i < bit_length; ++i)
   {
     size_t byte_idx = i / 8;
@@ -538,12 +689,17 @@ void DES_CFB1_decrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t bit_lengt
     buf[byte_idx] = (uint8_t)((buf[byte_idx] & ~(1U << shift)) | (pt_bit << shift));
     cfb1_shift_iv(ctx->Iv, ct_bit);
   }
+  return DES_OK;
 }
 #endif
 
 #if DES_ENABLE_OFB
-void DES_OFB_xcrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length)
+int DES_OFB_crypt(struct DES_ctx* ctx, uint8_t* buf, size_t length)
 {
+#if DES_STRICT
+  if (ctx == NULL || (length != 0 && buf == NULL))
+    return DES_ERR;
+#endif
   for (size_t i = 0; i < length; i += DES_BLOCKLEN)
   {
     /* Feedback is the keystream itself, independent of the data */
@@ -554,6 +710,7 @@ void DES_OFB_xcrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length)
       buf[i + bi] ^= ctx->Iv[bi];
     }
   }
+  return DES_OK;
 }
 #endif
 
@@ -563,8 +720,15 @@ void DES_OFB_xcrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length)
 
 #if DES_ENABLE_TDES
 
-void DES3_init_ctx(struct DES3_ctx* ctx, const uint8_t* key, size_t keylen)
+int DES3_init_ctx(struct DES3_ctx* ctx, const uint8_t* key, size_t keylen)
 {
+#if DES_STRICT
+  if (ctx == NULL || key == NULL)
+    return DES_ERR;
+#endif
+  if (keylen != 16 && keylen != 24)
+    return DES_ERR;
+
   des_key_schedule(&ctx->Sk[0], key);
   if (keylen == 16)
   {
@@ -578,17 +742,28 @@ void DES3_init_ctx(struct DES3_ctx* ctx, const uint8_t* key, size_t keylen)
     des_key_schedule(&ctx->Sk[16], key + 8);
     des_key_schedule(&ctx->Sk[32], key + 16);
   }
+  return DES_OK;
 }
 
 #if DES_NEEDS_IV
-void DES3_init_ctx_iv(struct DES3_ctx* ctx, const uint8_t* key, size_t keylen, const uint8_t* iv)
+int DES3_init_ctx_iv(struct DES3_ctx* ctx, const uint8_t* key, size_t keylen, const uint8_t* iv)
 {
-  DES3_init_ctx(ctx, key, keylen);
+#if DES_STRICT
+  if (iv == NULL)
+    return DES_ERR;
+#endif
+  if (DES3_init_ctx(ctx, key, keylen) != DES_OK)
+    return DES_ERR;
   memcpy(ctx->Iv, iv, DES_BLOCKLEN);
+  return DES_OK;
 }
 
 void DES3_ctx_set_iv(struct DES3_ctx* ctx, const uint8_t* iv)
 {
+#if DES_STRICT
+  if (ctx == NULL || iv == NULL)
+    return;
+#endif
   memcpy(ctx->Iv, iv, DES_BLOCKLEN);
 }
 #endif
@@ -614,18 +789,33 @@ static void des3_decrypt_block(const struct DES3_ctx* ctx, uint8_t* buf)
 #if DES_ENABLE_ECB
 void DES3_ECB_encrypt(const struct DES3_ctx* ctx, uint8_t* buf)
 {
+#if DES_STRICT
+  if (ctx == NULL || buf == NULL)
+    return;
+#endif
   des3_encrypt_block(ctx, buf);
 }
 
 void DES3_ECB_decrypt(const struct DES3_ctx* ctx, uint8_t* buf)
 {
+#if DES_STRICT
+  if (ctx == NULL || buf == NULL)
+    return;
+#endif
   des3_decrypt_block(ctx, buf);
 }
 #endif
 
 #if DES_ENABLE_CBC
-void DES3_CBC_encrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length)
+int DES3_CBC_encrypt(struct DES3_ctx* ctx, uint8_t* buf, size_t length)
 {
+#if DES_STRICT
+  if (ctx == NULL || (length != 0 && buf == NULL))
+    return DES_ERR;
+#endif
+  if ((length % DES_BLOCKLEN) != 0)
+    return DES_ERR;
+
   for (size_t i = 0; i < length; i += DES_BLOCKLEN)
   {
     for (uint8_t j = 0; j < DES_BLOCKLEN; ++j)
@@ -635,11 +825,19 @@ void DES3_CBC_encrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length)
     des3_encrypt_block(ctx, buf + i);
     memcpy(ctx->Iv, buf + i, DES_BLOCKLEN);
   }
+  return DES_OK;
 }
 
-void DES3_CBC_decrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length)
+int DES3_CBC_decrypt(struct DES3_ctx* ctx, uint8_t* buf, size_t length)
 {
   uint8_t store[DES_BLOCKLEN];
+#if DES_STRICT
+  if (ctx == NULL || (length != 0 && buf == NULL))
+    return DES_ERR;
+#endif
+  if ((length % DES_BLOCKLEN) != 0)
+    return DES_ERR;
+
   for (size_t i = 0; i < length; i += DES_BLOCKLEN)
   {
     memcpy(store, buf + i, DES_BLOCKLEN);
@@ -650,14 +848,27 @@ void DES3_CBC_decrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length)
     }
     memcpy(ctx->Iv, store, DES_BLOCKLEN);
   }
+  return DES_OK;
 }
 #endif
 
 #if DES_ENABLE_CTR
-void DES3_CTR_xcrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length)
+int DES3_CTR_crypt(struct DES3_ctx* ctx, uint8_t* buf, size_t length)
 {
   uint8_t buffer[DES_BLOCKLEN];
   size_t i = 0;
+  size_t blocks_needed;
+
+#if DES_STRICT
+  if (ctx == NULL || (length != 0 && buf == NULL))
+    return DES_ERR;
+#endif
+  if (length == 0)
+    return DES_OK;
+
+  blocks_needed = length / DES_BLOCKLEN + ((length % DES_BLOCKLEN) != 0 ? 1u : 0u);
+  if (!ctr_blocks_until_wrap(ctx->Iv, blocks_needed))
+    return DES_ERR;
 
   for (; i < length; i += DES_BLOCKLEN)
   {
@@ -671,14 +882,21 @@ void DES3_CTR_xcrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length)
     }
     increment_iv(ctx->Iv);
   }
+  return DES_OK;
 }
 #endif
 
 #if DES_ENABLE_CFB64
-void DES3_CFB64_encrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length)
+int DES3_CFB64_encrypt(struct DES3_ctx* ctx, uint8_t* buf, size_t length)
 {
   uint8_t keystream[DES_BLOCKLEN];
-  for (size_t i = 0; i < length; i += DES_BLOCKLEN)
+  size_t i;
+#if DES_STRICT
+  if (ctx == NULL || (length != 0 && buf == NULL))
+    return DES_ERR;
+#endif
+
+  for (i = 0; i + DES_BLOCKLEN <= length; i += DES_BLOCKLEN)
   {
     memcpy(keystream, ctx->Iv, DES_BLOCKLEN);
     des3_encrypt_block(ctx, keystream);
@@ -688,13 +906,31 @@ void DES3_CFB64_encrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length
     }
     memcpy(ctx->Iv, buf + i, DES_BLOCKLEN);
   }
+  if (i < length)
+  {
+    size_t rem = length - i;
+    memcpy(keystream, ctx->Iv, DES_BLOCKLEN);
+    des3_encrypt_block(ctx, keystream);
+    for (size_t j = 0; j < rem; ++j)
+    {
+      buf[i + j] ^= keystream[j];
+    }
+    cfb64_shift_iv(ctx->Iv, buf + i, rem);
+  }
+  return DES_OK;
 }
 
-void DES3_CFB64_decrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length)
+int DES3_CFB64_decrypt(struct DES3_ctx* ctx, uint8_t* buf, size_t length)
 {
   uint8_t keystream[DES_BLOCKLEN];
   uint8_t store[DES_BLOCKLEN];
-  for (size_t i = 0; i < length; i += DES_BLOCKLEN)
+  size_t i;
+#if DES_STRICT
+  if (ctx == NULL || (length != 0 && buf == NULL))
+    return DES_ERR;
+#endif
+
+  for (i = 0; i + DES_BLOCKLEN <= length; i += DES_BLOCKLEN)
   {
     memcpy(store, buf + i, DES_BLOCKLEN);
     memcpy(keystream, ctx->Iv, DES_BLOCKLEN);
@@ -706,13 +942,30 @@ void DES3_CFB64_decrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length
     }
     memcpy(ctx->Iv, store, DES_BLOCKLEN);
   }
+  if (i < length)
+  {
+    size_t rem = length - i;
+    memcpy(store, buf + i, rem);
+    memcpy(keystream, ctx->Iv, DES_BLOCKLEN);
+    des3_encrypt_block(ctx, keystream);
+    for (size_t j = 0; j < rem; ++j)
+    {
+      buf[i + j] ^= keystream[j];
+    }
+    cfb64_shift_iv(ctx->Iv, store, rem);
+  }
+  return DES_OK;
 }
 #endif
 
 #if DES_ENABLE_CFB8
-void DES3_CFB8_encrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length)
+int DES3_CFB8_encrypt(struct DES3_ctx* ctx, uint8_t* buf, size_t length)
 {
   uint8_t keystream[DES_BLOCKLEN];
+#if DES_STRICT
+  if (ctx == NULL || (length != 0 && buf == NULL))
+    return DES_ERR;
+#endif
   for (size_t i = 0; i < length; ++i)
   {
     memcpy(keystream, ctx->Iv, DES_BLOCKLEN);
@@ -721,11 +974,16 @@ void DES3_CFB8_encrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length)
     memmove(ctx->Iv, ctx->Iv + 1, DES_BLOCKLEN - 1);
     ctx->Iv[DES_BLOCKLEN - 1] = buf[i];
   }
+  return DES_OK;
 }
 
-void DES3_CFB8_decrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length)
+int DES3_CFB8_decrypt(struct DES3_ctx* ctx, uint8_t* buf, size_t length)
 {
   uint8_t keystream[DES_BLOCKLEN];
+#if DES_STRICT
+  if (ctx == NULL || (length != 0 && buf == NULL))
+    return DES_ERR;
+#endif
   for (size_t i = 0; i < length; ++i)
   {
     uint8_t c = buf[i];
@@ -735,13 +993,18 @@ void DES3_CFB8_decrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length)
     memmove(ctx->Iv, ctx->Iv + 1, DES_BLOCKLEN - 1);
     ctx->Iv[DES_BLOCKLEN - 1] = c;
   }
+  return DES_OK;
 }
 #endif
 
 #if DES_ENABLE_CFB1
-void DES3_CFB1_encrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t bit_length)
+int DES3_CFB1_encrypt(struct DES3_ctx* ctx, uint8_t* buf, size_t bit_length)
 {
   uint8_t keystream[DES_BLOCKLEN];
+#if DES_STRICT
+  if (ctx == NULL || (bit_length != 0 && buf == NULL))
+    return DES_ERR;
+#endif
   for (size_t i = 0; i < bit_length; ++i)
   {
     size_t byte_idx = i / 8;
@@ -752,11 +1015,16 @@ void DES3_CFB1_encrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t bit_len
     buf[byte_idx] = (uint8_t)((buf[byte_idx] & ~(1U << shift)) | (ct_bit << shift));
     cfb1_shift_iv(ctx->Iv, ct_bit);
   }
+  return DES_OK;
 }
 
-void DES3_CFB1_decrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t bit_length)
+int DES3_CFB1_decrypt(struct DES3_ctx* ctx, uint8_t* buf, size_t bit_length)
 {
   uint8_t keystream[DES_BLOCKLEN];
+#if DES_STRICT
+  if (ctx == NULL || (bit_length != 0 && buf == NULL))
+    return DES_ERR;
+#endif
   for (size_t i = 0; i < bit_length; ++i)
   {
     size_t byte_idx = i / 8;
@@ -768,12 +1036,17 @@ void DES3_CFB1_decrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t bit_len
     buf[byte_idx] = (uint8_t)((buf[byte_idx] & ~(1U << shift)) | (pt_bit << shift));
     cfb1_shift_iv(ctx->Iv, ct_bit);
   }
+  return DES_OK;
 }
 #endif
 
 #if DES_ENABLE_OFB
-void DES3_OFB_xcrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length)
+int DES3_OFB_crypt(struct DES3_ctx* ctx, uint8_t* buf, size_t length)
 {
+#if DES_STRICT
+  if (ctx == NULL || (length != 0 && buf == NULL))
+    return DES_ERR;
+#endif
   for (size_t i = 0; i < length; i += DES_BLOCKLEN)
   {
     /* Feedback is the keystream itself, independent of the data */
@@ -784,6 +1057,7 @@ void DES3_OFB_xcrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length)
       buf[i + bi] ^= ctx->Iv[bi];
     }
   }
+  return DES_OK;
 }
 #endif
 

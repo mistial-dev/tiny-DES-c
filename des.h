@@ -204,16 +204,18 @@ void DES_ECB_decrypt(const struct DES_ctx* ctx, uint8_t* buf);
  * @param ctx Pointer to initialized Single DES context.
  * @param buf Data buffer (length must be a multiple of 8 bytes). Encrypted in-place.
  * @param length Data length in bytes (must be a multiple of 8).
+ * @return DES_OK, or DES_ERR if length is not block-aligned.
  */
-void DES_CBC_encrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length);
+int DES_CBC_encrypt(struct DES_ctx* ctx, uint8_t* buf, size_t length);
 
 /**
  * @brief Decrypt buffer in CBC mode using Single DES.
  * @param ctx Pointer to initialized Single DES context.
  * @param buf Data buffer (length must be a multiple of 8 bytes). Decrypted in-place.
  * @param length Data length in bytes (must be a multiple of 8).
+ * @return DES_OK, or DES_ERR if length is not block-aligned.
  */
-void DES_CBC_decrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length);
+int DES_CBC_decrypt(struct DES_ctx* ctx, uint8_t* buf, size_t length);
 #endif
 
 #if DES_ENABLE_CTR
@@ -222,26 +224,30 @@ void DES_CBC_decrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length);
  * @param ctx Pointer to initialized Single DES context.
  * @param buf Data buffer (arbitrary length). Transformed in-place.
  * @param length Data length in bytes.
+ * @return DES_OK, or DES_ERR if the request would wrap the 64-bit counter
+ *         (buffer and IV left unchanged).
  */
-void DES_CTR_xcrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length);
+int DES_CTR_crypt(struct DES_ctx* ctx, uint8_t* buf, size_t length);
 #endif
 
 #if DES_ENABLE_CFB64
 /**
  * @brief Encrypt buffer in 64-bit Cipher Feedback (CFB64) mode using Single DES.
  * @param ctx Pointer to initialized Single DES context (IV holds chaining state).
- * @param buf Data buffer (length must be a multiple of 8 bytes). Encrypted in-place.
- * @param length Data length in bytes (must be a multiple of 8).
+ * @param buf Data buffer (arbitrary length; final segment may be shorter than 8).
+ * @param length Data length in bytes.
+ * @return DES_OK, or DES_ERR under DES_STRICT NULL checks.
  */
-void DES_CFB64_encrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length);
+int DES_CFB64_encrypt(struct DES_ctx* ctx, uint8_t* buf, size_t length);
 
 /**
  * @brief Decrypt buffer in 64-bit Cipher Feedback (CFB64) mode using Single DES.
  * @param ctx Pointer to initialized Single DES context (IV holds chaining state).
- * @param buf Data buffer (length must be a multiple of 8 bytes). Decrypted in-place.
- * @param length Data length in bytes (must be a multiple of 8).
+ * @param buf Data buffer (arbitrary length; final segment may be shorter than 8).
+ * @param length Data length in bytes.
+ * @return DES_OK, or DES_ERR under DES_STRICT NULL checks.
  */
-void DES_CFB64_decrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length);
+int DES_CFB64_decrypt(struct DES_ctx* ctx, uint8_t* buf, size_t length);
 #endif
 
 #if DES_ENABLE_CFB8
@@ -251,7 +257,7 @@ void DES_CFB64_decrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length);
  * @param buf Data buffer (arbitrary length). Encrypted in-place.
  * @param length Data length in bytes.
  */
-void DES_CFB8_encrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length);
+int DES_CFB8_encrypt(struct DES_ctx* ctx, uint8_t* buf, size_t length);
 
 /**
  * @brief Decrypt buffer in 8-bit Cipher Feedback (CFB8) mode using Single DES.
@@ -259,7 +265,7 @@ void DES_CFB8_encrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length);
  * @param buf Data buffer (arbitrary length). Decrypted in-place.
  * @param length Data length in bytes.
  */
-void DES_CFB8_decrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length);
+int DES_CFB8_decrypt(struct DES_ctx* ctx, uint8_t* buf, size_t length);
 #endif
 
 #if DES_ENABLE_CFB1
@@ -273,7 +279,7 @@ void DES_CFB8_decrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length);
  * @param buf Packed bit buffer. Encrypted in-place.
  * @param bit_length Data length in bits.
  */
-void DES_CFB1_encrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t bit_length);
+int DES_CFB1_encrypt(struct DES_ctx* ctx, uint8_t* buf, size_t bit_length);
 
 /**
  * @brief Decrypt bits in 1-bit Cipher Feedback (CFB1) mode using Single DES.
@@ -285,7 +291,7 @@ void DES_CFB1_encrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t bit_lengt
  * @param buf Packed bit buffer. Decrypted in-place.
  * @param bit_length Data length in bits.
  */
-void DES_CFB1_decrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t bit_length);
+int DES_CFB1_decrypt(struct DES_ctx* ctx, uint8_t* buf, size_t bit_length);
 #endif
 
 #if DES_ENABLE_OFB
@@ -295,7 +301,7 @@ void DES_CFB1_decrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t bit_lengt
  * @param buf Data buffer (length must be a multiple of 8 bytes). Transformed in-place.
  * @param length Data length in bytes (must be a multiple of 8).
  */
-void DES_OFB_xcrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length);
+int DES_OFB_crypt(struct DES_ctx* ctx, uint8_t* buf, size_t length);
 #endif
 
 
@@ -307,8 +313,9 @@ void DES_OFB_xcrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length);
  * @param ctx Pointer to 3DES context structure.
  * @param key Pointer to key buffer (16 bytes for 2-Key 3DES, 24 bytes for 3-Key 3DES).
  * @param keylen Key length in bytes (16 or 24).
+ * @return DES_OK on success, DES_ERR if keylen is not 16 or 24.
  */
-void DES3_init_ctx(struct DES3_ctx* ctx, const uint8_t* key, size_t keylen);
+int DES3_init_ctx(struct DES3_ctx* ctx, const uint8_t* key, size_t keylen);
 
 #if DES_NEEDS_IV
 /**
@@ -317,8 +324,9 @@ void DES3_init_ctx(struct DES3_ctx* ctx, const uint8_t* key, size_t keylen);
  * @param key Pointer to key buffer (16 or 24 bytes).
  * @param keylen Key length in bytes (16 or 24).
  * @param iv Pointer to 8-byte Initialization Vector.
+ * @return DES_OK on success, DES_ERR if keylen is not 16 or 24.
  */
-void DES3_init_ctx_iv(struct DES3_ctx* ctx, const uint8_t* key, size_t keylen, const uint8_t* iv);
+int DES3_init_ctx_iv(struct DES3_ctx* ctx, const uint8_t* key, size_t keylen, const uint8_t* iv);
 
 /**
  * @brief Set or update the Initialization Vector (IV) in 3DES context.
@@ -351,7 +359,7 @@ void DES3_ECB_decrypt(const struct DES3_ctx* ctx, uint8_t* buf);
  * @param buf Data buffer (length must be a multiple of 8 bytes). Encrypted in-place.
  * @param length Data length in bytes (must be a multiple of 8).
  */
-void DES3_CBC_encrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length);
+int DES3_CBC_encrypt(struct DES3_ctx* ctx, uint8_t* buf, size_t length);
 
 /**
  * @brief Decrypt buffer in CBC mode using 3DES.
@@ -359,7 +367,7 @@ void DES3_CBC_encrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length);
  * @param buf Data buffer (length must be a multiple of 8 bytes). Decrypted in-place.
  * @param length Data length in bytes (must be a multiple of 8).
  */
-void DES3_CBC_decrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length);
+int DES3_CBC_decrypt(struct DES3_ctx* ctx, uint8_t* buf, size_t length);
 #endif
 
 #if DES_ENABLE_CTR
@@ -369,7 +377,7 @@ void DES3_CBC_decrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length);
  * @param buf Data buffer (arbitrary length). Transformed in-place.
  * @param length Data length in bytes.
  */
-void DES3_CTR_xcrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length);
+int DES3_CTR_crypt(struct DES3_ctx* ctx, uint8_t* buf, size_t length);
 #endif
 
 #if DES_ENABLE_CFB64
@@ -379,7 +387,7 @@ void DES3_CTR_xcrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length);
  * @param buf Data buffer (length must be a multiple of 8 bytes). Encrypted in-place.
  * @param length Data length in bytes (must be a multiple of 8).
  */
-void DES3_CFB64_encrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length);
+int DES3_CFB64_encrypt(struct DES3_ctx* ctx, uint8_t* buf, size_t length);
 
 /**
  * @brief Decrypt buffer in 64-bit Cipher Feedback (CFB64) mode using 3DES.
@@ -387,7 +395,7 @@ void DES3_CFB64_encrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length
  * @param buf Data buffer (length must be a multiple of 8 bytes). Decrypted in-place.
  * @param length Data length in bytes (must be a multiple of 8).
  */
-void DES3_CFB64_decrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length);
+int DES3_CFB64_decrypt(struct DES3_ctx* ctx, uint8_t* buf, size_t length);
 #endif
 
 #if DES_ENABLE_CFB8
@@ -397,7 +405,7 @@ void DES3_CFB64_decrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length
  * @param buf Data buffer (arbitrary length). Encrypted in-place.
  * @param length Data length in bytes.
  */
-void DES3_CFB8_encrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length);
+int DES3_CFB8_encrypt(struct DES3_ctx* ctx, uint8_t* buf, size_t length);
 
 /**
  * @brief Decrypt buffer in 8-bit Cipher Feedback (CFB8) mode using 3DES.
@@ -405,7 +413,7 @@ void DES3_CFB8_encrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length)
  * @param buf Data buffer (arbitrary length). Decrypted in-place.
  * @param length Data length in bytes.
  */
-void DES3_CFB8_decrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length);
+int DES3_CFB8_decrypt(struct DES3_ctx* ctx, uint8_t* buf, size_t length);
 #endif
 
 #if DES_ENABLE_CFB1
@@ -419,7 +427,7 @@ void DES3_CFB8_decrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length)
  * @param buf Packed bit buffer. Encrypted in-place.
  * @param bit_length Data length in bits.
  */
-void DES3_CFB1_encrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t bit_length);
+int DES3_CFB1_encrypt(struct DES3_ctx* ctx, uint8_t* buf, size_t bit_length);
 
 /**
  * @brief Decrypt bits in 1-bit Cipher Feedback (CFB1) mode using 3DES.
@@ -431,7 +439,7 @@ void DES3_CFB1_encrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t bit_len
  * @param buf Packed bit buffer. Decrypted in-place.
  * @param bit_length Data length in bits.
  */
-void DES3_CFB1_decrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t bit_length);
+int DES3_CFB1_decrypt(struct DES3_ctx* ctx, uint8_t* buf, size_t bit_length);
 #endif
 
 #if DES_ENABLE_OFB
@@ -441,7 +449,7 @@ void DES3_CFB1_decrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t bit_len
  * @param buf Data buffer (length must be a multiple of 8 bytes). Transformed in-place.
  * @param length Data length in bytes (must be a multiple of 8).
  */
-void DES3_OFB_xcrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length);
+int DES3_OFB_crypt(struct DES3_ctx* ctx, uint8_t* buf, size_t length);
 #endif
 
 #endif /* #if DES_ENABLE_TDES */
