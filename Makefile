@@ -57,7 +57,7 @@ endif
 CAVP_CONFIG = .des_cavp_$(DES_CAVP)
 TEST_BUILD_DIR ?= .tiny-des-tests
 
-.PHONY: all clean test size
+.PHONY: all clean test test-sparse size benchmark
 
 all: des.o
 
@@ -66,6 +66,15 @@ des.o: des.c des.h
 
 size: des.o
 	size des.o
+
+benchmark: benchmark.c des.c des.h
+	mkdir -p $(TEST_BUILD_DIR)
+	$(CC) $(CFLAGS) $(MODE_DEFINITIONS) -c des.c -o $(TEST_BUILD_DIR)/benchmark-des.o
+	$(CC) $(CFLAGS) $(MODE_DEFINITIONS) \
+	  -DBENCHMARK_BYTES=$(or $(BENCHMARK_BYTES),16384) \
+	  -DBENCHMARK_ITERATIONS=$(or $(BENCHMARK_ITERATIONS),100) \
+	  benchmark.c $(TEST_BUILD_DIR)/benchmark-des.o -o $(TEST_BUILD_DIR)/benchmark
+	$(TEST_BUILD_DIR)/benchmark
 
 # Unit tests always link a full-mode library object so every suite compiles.
 $(TEST_BUILD_DIR)/des-test.o: des.c des.h

@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Unlicense
  */
 
-#ifndef _DES_H_
-#define _DES_H_
+#ifndef TINY_DES_H_
+#define TINY_DES_H_
 
 #include <stdint.h>
 #include <stddef.h>
@@ -494,4 +494,4 @@ int DES_CMAC_verify(const uint8_t* key, size_t keylen, const uint8_t* msg, size_
 }
 #endif
 
-#endif /* _DES_H_ */
+#endif /* TINY_DES_H_ */

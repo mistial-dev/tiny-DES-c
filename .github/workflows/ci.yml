@@ -7,6 +7,7 @@ on:
     branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
+  workflow_dispatch:
 
 jobs:
   build-and-test:
@@ -15,34 +16,79 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        compiler: [gcc, clang, msvc]
-        exclude:
+        include:
           - os: ubuntu-latest
-            compiler: msvc
-          - os: macos-latest
-            compiler: msvc
-          - os: windows-latest
             compiler: gcc
-          - os: windows-latest
+            cc: gcc
+          - os: ubuntu-latest
             compiler: clang
+            cc: clang
+          - os: macos-latest
+            compiler: clang
+            cc: clang
+          - os: windows-latest
+            compiler: msvc
+            cc: cl
 
     steps:
     - uses: actions/checkout@v4
 
-    - name: Ensure CMake & Build Tools Installed
+    - name: Install GCC/Clang
       if: runner.os == 'Linux'
       run: |
-        if ! command -v cmake &> /dev/null; then
-          sudo apt-get update && sudo apt-get install -y cmake build-essential
+        if [ "${{ matrix.cc }}" = clang ]; then
+          sudo apt-get update
+          sudo apt-get install -y clang cmake
+        else
+          sudo apt-get update
+          sudo apt-get install -y gcc cmake
         fi
 
+    - name: Select compiler
+      if: runner.os != 'Windows'
+      run: echo "CC=${{ matrix.cc }}" >> "$GITHUB_ENV"
+
     - name: Configure CMake
-      run: cmake -B build -DTINY_DES_BUILD_TESTS=ON -DTINY_DES_CAVP=ON
+      run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DTINY_DES_BUILD_TESTS=ON -DTINY_DES_CAVP=ON
 
     - name: Build
-      run: cmake --build build --config Release
+      run: cmake --build build --config Release --parallel 4
 
     - name: Test
-      working-directory: build
-      run: ctest -C Release --output-on-failure
+      run: ctest --test-dir build -C Release --output-on-failure --parallel 4
+
+    - name: Sparse Make configuration coverage
+      if: runner.os == 'Linux' && matrix.compiler == 'gcc'
+      run: |
+        set -e
+        make clean
+        make size
+        make test
+
+    - name: Product-only build with -Werror (CTR+TDES)
+      if: runner.os == 'Linux' && matrix.compiler == 'gcc'
+      run: |
+        set -e
+        make clean
+        ${CC:-gcc} -Wall -Wextra -Werror -O2 -std=c99 -I. \
+          -DDES_ENABLE_ECB=0 -DDES_ENABLE_CBC=0 -DDES_ENABLE_CTR=1 -DDES_ENABLE_OFB=0 \
+          -DDES_ENABLE_CFB1=0 -DDES_ENABLE_CFB8=0 -DDES_ENABLE_CFB64=0 -DDES_ENABLE_TDES=1 \
+          -DDES_ENABLE_CMAC=0 -c des.c -o des.o
+        nm des.o | grep -E 'DES_CMAC|DES_CBC|DES_ECB|DES_CFB' && exit 1 || true
+        size des.o
+
+    - name: Benchmark
+      if: runner.os == 'Linux' && matrix.compiler == 'gcc'
+      run: make benchmark
+
+    - name: Set up Python for PlatformIO
+      if: runner.os == 'Linux' && matrix.compiler == 'gcc'
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+
+    - name: Test PlatformIO Library Build
+      if: runner.os == 'Linux' && matrix.compiler == 'gcc'
+      run: |
+        pip install --upgrade platformio
+        pio ci --lib="." --board=uno --board=esp32dev --board=nucleo_f401re examples/ctr_smoke.c
