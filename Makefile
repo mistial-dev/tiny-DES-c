@@ -105,7 +105,48 @@ test: $(TEST_BUILD_DIR)/des-test.o $(TEST_BUILD_DIR)/munit.o $(TEST_BUILD_DIR)/t
 	  objs="$$objs $(TEST_BUILD_DIR)/cavp.o"; \
 	fi; \
 	$(CC) $(CFLAGS) -o $(TEST_BUILD_DIR)/test_des $$objs; \
-	$(TEST_BUILD_DIR)/test_des
+	$(TEST_BUILD_DIR)/test_des; \
+	$(MAKE) test-sparse
+
+# Sparse configuration builds (not multiplied across a full matrix).
+test-sparse:
+	@set -e; \
+	mkdir -p $(TEST_BUILD_DIR); \
+	$(CC) $(CFLAGS) -c munit.c -o $(TEST_BUILD_DIR)/munit.o; \
+	run_cfg() { \
+	  name=$$1; shift; \
+	  common="$(CFLAGS) $$*"; \
+	  echo "=== sparse config: $$name ==="; \
+	  $(CC) $${common} -c des.c -o $(TEST_BUILD_DIR)/des-cfg-$${name}.o; \
+	  $(CC) $${common} -c test.c -o $(TEST_BUILD_DIR)/test-cfg-$${name}.o; \
+	  $(CC) $${common} -c test_edge_vectors.c -o $(TEST_BUILD_DIR)/edge-cfg-$${name}.o; \
+	  $(CC) $${common} -c cavp.c -o $(TEST_BUILD_DIR)/cavp-cfg-$${name}.o; \
+	  $(CC) $(CFLAGS) -o $(TEST_BUILD_DIR)/test-cfg-$${name} \
+	    $(TEST_BUILD_DIR)/des-cfg-$${name}.o $(TEST_BUILD_DIR)/test-cfg-$${name}.o \
+	    $(TEST_BUILD_DIR)/edge-cfg-$${name}.o $(TEST_BUILD_DIR)/cavp-cfg-$${name}.o \
+	    $(TEST_BUILD_DIR)/munit.o; \
+	  $(TEST_BUILD_DIR)/test-cfg-$${name}; \
+	}; \
+	run_cfg default-product \
+	  -DDES_ENABLE_ECB=0 -DDES_ENABLE_CBC=0 -DDES_ENABLE_CTR=1 -DDES_ENABLE_OFB=0 \
+	  -DDES_ENABLE_CFB1=0 -DDES_ENABLE_CFB8=0 -DDES_ENABLE_CFB64=0 -DDES_ENABLE_TDES=1 \
+	  -DDES_ENABLE_CMAC=0 -DDES_ZEROIZE=1 -DDES_STRICT=0 -DDES_CAVP=0; \
+	run_cfg cmac-only \
+	  -DDES_ENABLE_ECB=0 -DDES_ENABLE_CBC=0 -DDES_ENABLE_CTR=0 -DDES_ENABLE_OFB=0 \
+	  -DDES_ENABLE_CFB1=0 -DDES_ENABLE_CFB8=0 -DDES_ENABLE_CFB64=0 -DDES_ENABLE_TDES=0 \
+	  -DDES_ENABLE_CMAC=1 -DDES_ZEROIZE=1 -DDES_STRICT=0 -DDES_CAVP=0; \
+	run_cfg strict-ctr \
+	  -DDES_ENABLE_ECB=0 -DDES_ENABLE_CBC=0 -DDES_ENABLE_CTR=1 -DDES_ENABLE_OFB=0 \
+	  -DDES_ENABLE_CFB1=0 -DDES_ENABLE_CFB8=0 -DDES_ENABLE_CFB64=0 -DDES_ENABLE_TDES=0 \
+	  -DDES_ENABLE_CMAC=0 -DDES_ZEROIZE=1 -DDES_STRICT=1 -DDES_CAVP=0; \
+	run_cfg zeroize-off \
+	  -DDES_ENABLE_ECB=0 -DDES_ENABLE_CBC=0 -DDES_ENABLE_CTR=1 -DDES_ENABLE_OFB=0 \
+	  -DDES_ENABLE_CFB1=0 -DDES_ENABLE_CFB8=0 -DDES_ENABLE_CFB64=0 -DDES_ENABLE_TDES=1 \
+	  -DDES_ENABLE_CMAC=0 -DDES_ZEROIZE=0 -DDES_STRICT=0 -DDES_CAVP=0; \
+	run_cfg ecb-cbc-single \
+	  -DDES_ENABLE_ECB=1 -DDES_ENABLE_CBC=1 -DDES_ENABLE_CTR=0 -DDES_ENABLE_OFB=0 \
+	  -DDES_ENABLE_CFB1=0 -DDES_ENABLE_CFB8=0 -DDES_ENABLE_CFB64=0 -DDES_ENABLE_TDES=0 \
+	  -DDES_ENABLE_CMAC=0 -DDES_ZEROIZE=1 -DDES_STRICT=0 -DDES_CAVP=0
 
 clean:
 	rm -f des.o .des_cavp_*

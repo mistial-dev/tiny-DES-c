@@ -1,12 +1,17 @@
 /*
+ * SPDX-FileCopyrightText: Mistial Dev
  * SPDX-License-Identifier: Unlicense
  */
 
 #include <string.h>
 
 #include "des.h"
-#include "edge_vectors.h"
 #include "munit.h"
+
+#if DES_ENABLE_ECB && DES_ENABLE_CBC && DES_ENABLE_CFB1 && DES_ENABLE_CFB8 && \
+    DES_ENABLE_CFB64 && DES_ENABLE_OFB && DES_ENABLE_TDES
+
+#include "edge_vectors.h"
 
 static MunitResult test_edge_vectors(const MunitParameter params[], void* data)
 {
@@ -73,3 +78,14 @@ MunitResult test_edge_vectors_suite(const MunitParameter params[], void* data)
 {
   return test_edge_vectors(params, data);
 }
+
+#else
+
+MunitResult test_edge_vectors_suite(const MunitParameter params[], void* data)
+{
+  (void) params;
+  (void) data;
+  return MUNIT_SKIP;
+}
+
+#endif

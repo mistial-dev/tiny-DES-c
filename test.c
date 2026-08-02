@@ -28,6 +28,7 @@ MunitResult test_edge_vectors_suite(const MunitParameter params[], void* data);
 /* ========================================================================= */
 
 /* 1A. Single DES ECB (KAT Encrypt, KAT Decrypt, & Round-Trip) */
+#if DES_ENABLE_ECB
 static MunitResult test_des_ecb(const MunitParameter params[], void* data)
 {
   (void) params;
@@ -56,8 +57,10 @@ static MunitResult test_des_ecb(const MunitParameter params[], void* data)
 
   return MUNIT_OK;
 }
+#endif /* DES_ENABLE_ECB */
 
 /* 1B. Single DES CBC (KAT Encrypt, KAT Decrypt, & Round-Trip) */
+#if DES_ENABLE_CBC
 static MunitResult test_des_cbc(const MunitParameter params[], void* data)
 {
   (void) params;
@@ -88,8 +91,10 @@ static MunitResult test_des_cbc(const MunitParameter params[], void* data)
 
   return MUNIT_OK;
 }
+#endif /* DES_ENABLE_CBC */
 
 /* 1C. Single DES CTR Stream Mode */
+#if DES_ENABLE_CTR
 static MunitResult test_des_ctr(const MunitParameter params[], void* data)
 {
   (void) params;
@@ -113,6 +118,7 @@ static MunitResult test_des_ctr(const MunitParameter params[], void* data)
 
   return MUNIT_OK;
 }
+#endif /* DES_ENABLE_CTR */
 
 
 /* ========================================================================= */
@@ -120,6 +126,7 @@ static MunitResult test_des_ctr(const MunitParameter params[], void* data)
 /* ========================================================================= */
 
 /* 2A. 2-Key 3DES ECB (KAT Encrypt, KAT Decrypt, & Round-Trip) */
+#if DES_ENABLE_TDES && DES_ENABLE_ECB
 static MunitResult test_tdes2_ecb(const MunitParameter params[], void* data)
 {
   (void) params;
@@ -152,8 +159,10 @@ static MunitResult test_tdes2_ecb(const MunitParameter params[], void* data)
 
   return MUNIT_OK;
 }
+#endif /* DES_ENABLE_TDES && DES_ENABLE_ECB */
 
 /* 2B. 2-Key 3DES CBC (KAT Encrypt, KAT Decrypt, & Round-Trip) */
+#if DES_ENABLE_TDES && DES_ENABLE_CBC
 static MunitResult test_tdes2_cbc(const MunitParameter params[], void* data)
 {
   (void) params;
@@ -184,8 +193,10 @@ static MunitResult test_tdes2_cbc(const MunitParameter params[], void* data)
 
   return MUNIT_OK;
 }
+#endif /* DES_ENABLE_TDES && DES_ENABLE_CBC */
 
 /* 2C. 2-Key 3DES CTR Stream Mode */
+#if DES_ENABLE_TDES && DES_ENABLE_CTR
 static MunitResult test_tdes2_ctr(const MunitParameter params[], void* data)
 {
   (void) params;
@@ -207,6 +218,7 @@ static MunitResult test_tdes2_ctr(const MunitParameter params[], void* data)
 
   return MUNIT_OK;
 }
+#endif /* DES_ENABLE_TDES && DES_ENABLE_CTR */
 
 
 /* ========================================================================= */
@@ -214,6 +226,7 @@ static MunitResult test_tdes2_ctr(const MunitParameter params[], void* data)
 /* ========================================================================= */
 
 /* 3A. 3-Key 3DES ECB (KAT Encrypt, KAT Decrypt, & Round-Trip) */
+#if DES_ENABLE_TDES && DES_ENABLE_ECB
 static MunitResult test_tdes3_ecb(const MunitParameter params[], void* data)
 {
   (void) params;
@@ -246,8 +259,10 @@ static MunitResult test_tdes3_ecb(const MunitParameter params[], void* data)
 
   return MUNIT_OK;
 }
+#endif /* DES_ENABLE_TDES && DES_ENABLE_ECB */
 
 /* 3B. 3-Key 3DES CBC (KAT Encrypt, KAT Decrypt, & Round-Trip) */
+#if DES_ENABLE_TDES && DES_ENABLE_CBC
 static MunitResult test_tdes3_cbc(const MunitParameter params[], void* data)
 {
   (void) params;
@@ -278,8 +293,10 @@ static MunitResult test_tdes3_cbc(const MunitParameter params[], void* data)
 
   return MUNIT_OK;
 }
+#endif /* DES_ENABLE_TDES && DES_ENABLE_CBC */
 
 /* 3C. 3-Key 3DES CTR Stream Mode */
+#if DES_ENABLE_TDES && DES_ENABLE_CTR
 static MunitResult test_tdes3_ctr(const MunitParameter params[], void* data)
 {
   (void) params;
@@ -301,6 +318,7 @@ static MunitResult test_tdes3_ctr(const MunitParameter params[], void* data)
 
   return MUNIT_OK;
 }
+#endif /* DES_ENABLE_TDES && DES_ENABLE_CTR */
 
 
 /* ========================================================================= */
@@ -308,6 +326,7 @@ static MunitResult test_tdes3_ctr(const MunitParameter params[], void* data)
 /* ========================================================================= */
 
 /* 4A. Single DES OFB (KAT, Decrypt symmetry, Cross-call chaining) */
+#if DES_ENABLE_OFB
 static MunitResult test_des_ofb(const MunitParameter params[], void* data)
 {
   (void) params;
@@ -329,8 +348,10 @@ static MunitResult test_des_ofb(const MunitParameter params[], void* data)
 
   return MUNIT_OK;
 }
+#endif /* DES_ENABLE_OFB */
 
 /* 4B. Single DES CFB64 (KAT Encrypt, KAT Decrypt) */
+#if DES_ENABLE_CFB64
 static MunitResult test_des_cfb64(const MunitParameter params[], void* data)
 {
   (void) params;
@@ -350,8 +371,10 @@ static MunitResult test_des_cfb64(const MunitParameter params[], void* data)
 
   return MUNIT_OK;
 }
+#endif /* DES_ENABLE_CFB64 */
 
 /* 4C. Single DES CFB8 (KAT Encrypt, KAT Decrypt) */
+#if DES_ENABLE_CFB8
 static MunitResult test_des_cfb8(const MunitParameter params[], void* data)
 {
   (void) params;
@@ -371,8 +394,10 @@ static MunitResult test_des_cfb8(const MunitParameter params[], void* data)
 
   return MUNIT_OK;
 }
+#endif /* DES_ENABLE_CFB8 */
 
 /* 4D. Single DES CFB1: NIST CAVP TCFB1vartext.rsp single-bit cases + roundtrip */
+#if DES_ENABLE_CFB1
 static MunitResult test_des_cfb1(const MunitParameter params[], void* data)
 {
   (void) params;
@@ -410,8 +435,10 @@ static MunitResult test_des_cfb1(const MunitParameter params[], void* data)
 
   return MUNIT_OK;
 }
+#endif /* DES_ENABLE_CFB1 */
 
 /* 4E. 3-Key 3DES OFB / CFB64 / CFB8 (KAT + Decrypt) */
+#if DES_ENABLE_TDES && (DES_ENABLE_OFB || DES_ENABLE_CFB64 || DES_ENABLE_CFB8 || DES_ENABLE_CFB1)
 static MunitResult test_tdes3_feedback_modes(const MunitParameter params[], void* data)
 {
   (void) params;
@@ -457,8 +484,10 @@ static MunitResult test_tdes3_feedback_modes(const MunitParameter params[], void
 
   return MUNIT_OK;
 }
+#endif /* DES_ENABLE_TDES && (DES_ENABLE_OFB || DES_ENABLE_CFB64 || DES_ENABLE_CFB8 || DES_ENABLE_CFB1) */
 
 /* 4F. Cross-call chaining: split calls must equal one-shot output */
+#if DES_ENABLE_TDES && (DES_ENABLE_OFB || DES_ENABLE_CFB64 || DES_ENABLE_CFB8 || DES_ENABLE_CFB1)
 static MunitResult test_feedback_mode_chaining(const MunitParameter params[], void* data)
 {
   (void) params;
@@ -510,6 +539,7 @@ static MunitResult test_feedback_mode_chaining(const MunitParameter params[], vo
 
   return MUNIT_OK;
 }
+#endif /* DES_ENABLE_TDES && (DES_ENABLE_OFB || DES_ENABLE_CFB64 || DES_ENABLE_CFB8 || DES_ENABLE_CFB1) */
 
 
 /* ========================================================================= */
@@ -517,6 +547,7 @@ static MunitResult test_feedback_mode_chaining(const MunitParameter params[], vo
 /* ========================================================================= */
 
 /* Equivalence Test: 3DES with K1=K2=K3 equals Single DES */
+#if DES_ENABLE_TDES && DES_ENABLE_ECB
 static MunitResult test_tdes_single_des_equivalence(const MunitParameter params[], void* data)
 {
   (void) params;
@@ -553,8 +584,18 @@ static MunitResult test_tdes_single_des_equivalence(const MunitParameter params[
 
   return MUNIT_OK;
 }
+#endif /* DES_ENABLE_TDES && DES_ENABLE_ECB */
 
 #if DES_ENABLE_CMAC
+/* OpenSSL-cross-checked KATs (legacy des-cbc / des-ede-cbc / des-ede3-cbc). */
+static const uint8_t cmac_kat_msg[] = "tiny-DES-c CMAC Test!";
+static const uint8_t cmac_kat_des[8]   = {0x0a,0xa5,0xf5,0xff,0x35,0xe8,0x9f,0x6a};
+static const uint8_t cmac_kat_tdes2[8] = {0x3c,0xc1,0x01,0x09,0xae,0x58,0xa5,0xa6};
+static const uint8_t cmac_kat_tdes3[8] = {0xea,0x5e,0x07,0x9a,0xac,0x25,0x18,0xe9};
+static const uint8_t cmac_kat_des_empty[8]   = {0x86,0xf7,0x9c,0x13,0xfd,0x30,0x6e,0x67};
+static const uint8_t cmac_kat_tdes2_empty[8] = {0x79,0xce,0x52,0xa7,0xf7,0x86,0xa9,0x60};
+static const uint8_t cmac_kat_tdes3_empty[8] = {0x7d,0xb0,0xd3,0x7d,0xf9,0x36,0xc5,0x50};
+
 /* CMAC Tests (NIST SP 800-38B) */
 static MunitResult test_des_cmac(const MunitParameter params[], void* data)
 {
@@ -562,24 +603,29 @@ static MunitResult test_des_cmac(const MunitParameter params[], void* data)
   (void) data;
 
   uint8_t cmac1[8], cmac2[8], cmac3[8], cmac_empty[8], bad[8];
-  const uint8_t message[] = "tiny-DES-c CMAC Test!";
-  size_t msglen = sizeof(message) - 1;
+  size_t msglen = sizeof(cmac_kat_msg) - 1;
 
-  munit_assert_int(DES_OK, ==, DES_CMAC(des_test_key, 8, message, msglen, cmac1, 8));
-  munit_assert_int(DES_OK, ==, DES_CMAC(tdes2_key, 16, message, msglen, cmac2, 8));
-  munit_assert_int(DES_OK, ==, DES_CMAC(tdes3_key, 24, message, msglen, cmac3, 8));
+  munit_assert_int(DES_OK, ==, DES_CMAC(des_test_key, 8, cmac_kat_msg, msglen, cmac1, 8));
+  munit_assert_int(DES_OK, ==, DES_CMAC(tdes2_key, 16, cmac_kat_msg, msglen, cmac2, 8));
+  munit_assert_int(DES_OK, ==, DES_CMAC(tdes3_key, 24, cmac_kat_msg, msglen, cmac3, 8));
+  munit_assert_memory_equal(8, cmac1, cmac_kat_des);
+  munit_assert_memory_equal(8, cmac2, cmac_kat_tdes2);
+  munit_assert_memory_equal(8, cmac3, cmac_kat_tdes3);
+
+  munit_assert_int(DES_OK, ==, DES_CMAC(des_test_key, 8, NULL, 0, cmac_empty, 8));
+  munit_assert_memory_equal(8, cmac_empty, cmac_kat_des_empty);
   munit_assert_int(DES_OK, ==, DES_CMAC(tdes2_key, 16, NULL, 0, cmac_empty, 8));
+  munit_assert_memory_equal(8, cmac_empty, cmac_kat_tdes2_empty);
+  munit_assert_int(DES_OK, ==, DES_CMAC(tdes3_key, 24, NULL, 0, cmac_empty, 8));
+  munit_assert_memory_equal(8, cmac_empty, cmac_kat_tdes3_empty);
 
-  munit_assert_memory_not_equal(8, cmac1, cmac2);
-  munit_assert_memory_not_equal(8, cmac2, cmac3);
-
-  munit_assert_int(DES_OK, ==, DES_CMAC_verify(tdes2_key, 16, message, msglen, cmac2, 8));
+  munit_assert_int(DES_OK, ==, DES_CMAC_verify(tdes2_key, 16, cmac_kat_msg, msglen, cmac2, 8));
   memcpy(bad, cmac2, 8);
   bad[0] ^= 0x01U;
-  munit_assert_int(DES_ERR, ==, DES_CMAC_verify(tdes2_key, 16, message, msglen, bad, 8));
+  munit_assert_int(DES_ERR, ==, DES_CMAC_verify(tdes2_key, 16, cmac_kat_msg, msglen, bad, 8));
 
-  munit_assert_int(DES_ERR, ==, DES_CMAC(des_test_key, 10, message, msglen, cmac1, 8));
-  munit_assert_int(DES_ERR, ==, DES_CMAC(des_test_key, 8, message, msglen, cmac1, 0));
+  munit_assert_int(DES_ERR, ==, DES_CMAC(des_test_key, 10, cmac_kat_msg, msglen, cmac1, 8));
+  munit_assert_int(DES_ERR, ==, DES_CMAC(des_test_key, 8, cmac_kat_msg, msglen, cmac1, 0));
 
   return MUNIT_OK;
 }
@@ -596,15 +642,67 @@ static MunitResult test_des_cmac_single_des_matches_2k3des_degenerate(const Muni
     0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88
   };
   uint8_t message[8] = {0xde, 0xad, 0xbe, 0xef, 0x00, 0x11, 0x22, 0x33};
+  static const uint8_t expected[8] = {0x25,0xf8,0xaf,0xb2,0x45,0xd1,0x53,0x88};
 
   uint8_t mac8[8], mac16[8];
   munit_assert_int(DES_OK, ==, DES_CMAC(key8, sizeof(key8), message, sizeof(message), mac8, 8));
   munit_assert_int(DES_OK, ==, DES_CMAC(key16, sizeof(key16), message, sizeof(message), mac16, 8));
   munit_assert_memory_equal(8, mac8, mac16);
+  munit_assert_memory_equal(8, mac8, expected);
 
   return MUNIT_OK;
 }
 #endif /* DES_ENABLE_CMAC */
+
+/* Negative classical API cases */
+static MunitResult test_des_api_errors(const MunitParameter params[], void* data)
+{
+  (void) params;
+  (void) data;
+
+#if DES_ENABLE_CBC
+  {
+    struct DES_ctx ctx;
+    uint8_t buf[16] = {0};
+    DES_init_ctx_iv(&ctx, des_test_key, des_cbc_iv);
+    munit_assert_int(DES_ERR, ==, DES_CBC_encrypt(&ctx, buf, 7));
+    munit_assert_int(DES_ERR, ==, DES_CBC_decrypt(&ctx, buf, 1));
+    munit_assert_int(DES_OK, ==, DES_CBC_encrypt(&ctx, buf, 0));
+  }
+#endif
+
+#if DES_ENABLE_CTR
+  {
+    struct DES_ctx ctx;
+    uint8_t buf[16];
+    uint8_t iv_max[8] = {0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff};
+    uint8_t iv_saved[8];
+    memset(buf, 0x5a, sizeof(buf));
+    DES_init_ctx_iv(&ctx, des_test_key, iv_max);
+    memcpy(iv_saved, ctx.Iv, 8);
+    /* One block from all-ones wraps the counter after the block; one block OK. */
+    munit_assert_int(DES_OK, ==, DES_CTR_crypt(&ctx, buf, 8));
+    /* Restore max IV and request two blocks: wrap mid-request. */
+    DES_ctx_set_iv(&ctx, iv_max);
+    munit_assert_int(DES_ERR, ==, DES_CTR_crypt(&ctx, buf, 16));
+    munit_assert_memory_equal(8, ctx.Iv, iv_max);
+  }
+#endif
+
+#if DES_ENABLE_TDES
+  {
+    struct DES3_ctx ctx;
+    uint8_t junk[24] = {0};
+    munit_assert_int(DES_ERR, ==, DES3_init_ctx(&ctx, junk, 10));
+    munit_assert_int(DES_ERR, ==, DES3_init_ctx(&ctx, junk, 0));
+    munit_assert_int(DES_OK, ==, DES3_init_ctx(&ctx, tdes2_key, 16));
+    munit_assert_int(DES_OK, ==, DES3_init_ctx(&ctx, tdes3_key, 24));
+  }
+#endif
+
+  return MUNIT_OK;
+}
+
 
 /* Secure wipe / context clear smoke tests */
 static MunitResult test_des_secure_zero_and_clear(const MunitParameter params[], void* data)
@@ -660,31 +758,59 @@ static MunitResult test_des_secure_zero_and_clear(const MunitParameter params[],
 /* --- Test Suite Setup --- */
 
 static MunitTest test_suite_tests[] = {
+#if DES_ENABLE_ECB
   { "/des_ecb",                           test_des_ecb,                           NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL },
+#endif
+#if DES_ENABLE_CBC
   { "/des_cbc",                           test_des_cbc,                           NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL },
+#endif
+#if DES_ENABLE_CTR
   { "/des_ctr",                           test_des_ctr,                           NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL },
+#endif
+#if DES_ENABLE_TDES && DES_ENABLE_ECB
   { "/tdes2_ecb",                         test_tdes2_ecb,                         NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL },
-  { "/tdes2_cbc",                         test_tdes2_cbc,                         NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL },
-  { "/tdes2_ctr",                         test_tdes2_ctr,                         NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL },
   { "/tdes3_ecb",                         test_tdes3_ecb,                         NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL },
+#endif
+#if DES_ENABLE_TDES && DES_ENABLE_CBC
+  { "/tdes2_cbc",                         test_tdes2_cbc,                         NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL },
   { "/tdes3_cbc",                         test_tdes3_cbc,                         NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL },
+#endif
+#if DES_ENABLE_TDES && DES_ENABLE_CTR
+  { "/tdes2_ctr",                         test_tdes2_ctr,                         NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL },
   { "/tdes3_ctr",                         test_tdes3_ctr,                         NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL },
+#endif
+#if DES_ENABLE_OFB
   { "/des_ofb",                           test_des_ofb,                           NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL },
+#endif
+#if DES_ENABLE_CFB64
   { "/des_cfb64",                         test_des_cfb64,                         NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL },
+#endif
+#if DES_ENABLE_CFB8
   { "/des_cfb8",                          test_des_cfb8,                          NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL },
+#endif
+#if DES_ENABLE_CFB1
   { "/des_cfb1",                          test_des_cfb1,                          NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL },
+#endif
+#if DES_ENABLE_TDES && (DES_ENABLE_OFB || DES_ENABLE_CFB64 || DES_ENABLE_CFB8 || DES_ENABLE_CFB1)
   { "/tdes3_feedback_modes",              test_tdes3_feedback_modes,              NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL },
   { "/feedback_mode_chaining",            test_feedback_mode_chaining,            NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL },
+#endif
+#if DES_ENABLE_TDES && DES_ENABLE_ECB
   { "/tdes_single_des_equiv",            test_tdes_single_des_equivalence,        NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL },
+#endif
 #if DES_ENABLE_CMAC
   { "/des_cmac",                          test_des_cmac,                          NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL },
   { "/des_cmac_single_des_degenerate",    test_des_cmac_single_des_matches_2k3des_degenerate, NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL },
 #endif
+  { "/des_api_errors",                    test_des_api_errors,                    NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL },
   { "/des_secure_zero_and_clear",         test_des_secure_zero_and_clear,         NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL },
 #if DES_CAVP_AVAILABLE
   { "/cavp",                              test_cavp,                              NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL },
 #endif
+#if DES_ENABLE_ECB && DES_ENABLE_CBC && DES_ENABLE_CFB1 && DES_ENABLE_CFB8 && \
+    DES_ENABLE_CFB64 && DES_ENABLE_OFB && DES_ENABLE_TDES
   { "/edge_vectors",                      test_edge_vectors_suite,                NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL },
+#endif
   { NULL, NULL, NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL }
 };
 
