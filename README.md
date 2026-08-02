@@ -155,7 +155,24 @@ Running test suite with seed 0x91623758...
 /tiny-des-c/tdes_single_des_equiv             [ OK    ]
 /tiny-des-c/des_cmac                          [ OK    ]
 /tiny-des-c/des_cmac_single_des_degenerate    [ OK    ]
-18 of 18 (100%) tests successful, 0 (0%) test skipped.
+19 of 19 (100%) tests successful, 0 (0%) test skipped.
+```
+
+---
+
+### Wycheproof-Style Edge-Case Vectors
+
+[`test_vectors/edge_cases.json`](test_vectors/edge_cases.json) contains 16
+valid DES/3DES edge cases in a Wycheproof-style JSON format. It covers weak
+and parity-variant keys, 2-key and 3-key TDES, unusual IVs, non-block-aligned
+streams, and partial-bit CFB1 inputs. The native test suite executes the same
+cases through the C API using the generated [`edge_vectors.h`](edge_vectors.h).
+
+The generator cross-checks byte-oriented ciphertexts with PyCA
+`cryptography` and OpenSSL. Recreate both checked-in artifacts with:
+
+```bash
+python3 generate_edge_vectors.py
 ```
 
 ---

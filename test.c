@@ -21,6 +21,8 @@ MunitResult test_cavp(const MunitParameter params[], void* data);
 #define DES_CAVP_AVAILABLE 0
 #endif
 
+MunitResult test_edge_vectors_suite(const MunitParameter params[], void* data);
+
 /* ========================================================================= */
 /* Matrix 1: Single DES                                                      */
 /* ========================================================================= */
@@ -634,6 +636,7 @@ static MunitTest test_suite_tests[] = {
 #if DES_CAVP_AVAILABLE
   { "/cavp",                              test_cavp,                              NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL },
 #endif
+  { "/edge_vectors",                      test_edge_vectors_suite,                NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL },
   { NULL, NULL, NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL }
 };
 

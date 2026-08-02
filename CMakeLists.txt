@@ -86,7 +86,7 @@ if(TINY_DES_BUILD_TESTS)
         set(TINY_DES_CAVP_DEFINITION 0)
     endif()
 
-    add_executable(test_des test.c munit.c cavp.c)
+    add_executable(test_des test.c test_edge_vectors.c munit.c cavp.c)
     target_link_libraries(test_des PRIVATE tiny-des-c)
     target_compile_definitions(test_des PRIVATE
         DES_CAVP=${TINY_DES_CAVP_DEFINITION}
