@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: Mistial Dev
+# SPDX-License-Identifier: Unlicense
+
 # Build & Compiled artifacts
 *.o
 *.a
@@ -7,6 +10,8 @@
 test_des
 test_cpp
 build/
+.tiny-des-tests/
+.des_cavp_*
 
 # Coverage files
 *.gcda

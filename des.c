@@ -306,7 +306,7 @@ static void des_cipher_block(const uint32_t (*sk)[2], uint8_t* buf, int decrypt)
   buf[7] = (uint8_t)(L);
 }
 
-#if (defined(CTR) && (CTR == 1))
+#if DES_ENABLE_CTR
 static void increment_iv(uint8_t* iv)
 {
   for (int i = DES_BLOCKLEN - 1; i >= 0; --i)
@@ -340,7 +340,7 @@ void DES_ctx_clear(struct DES_ctx* ctx)
   DES_secure_zero(ctx, sizeof(*ctx));
 }
 
-#if defined(TDES) && (TDES == 1)
+#if DES_ENABLE_TDES
 void DES3_ctx_clear(struct DES3_ctx* ctx)
 {
   if (ctx == NULL)
@@ -371,7 +371,7 @@ void DES_ctx_set_iv(struct DES_ctx* ctx, const uint8_t* iv)
 }
 #endif
 
-#if defined(ECB) && (ECB == 1)
+#if DES_ENABLE_ECB
 void DES_ECB_encrypt(const struct DES_ctx* ctx, uint8_t* buf)
 {
   des_cipher_block(ctx->Sk, buf, 0);
@@ -383,7 +383,7 @@ void DES_ECB_decrypt(const struct DES_ctx* ctx, uint8_t* buf)
 }
 #endif
 
-#if defined(CBC) && (CBC == 1)
+#if DES_ENABLE_CBC
 void DES_CBC_encrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length)
 {
   for (size_t i = 0; i < length; i += DES_BLOCKLEN)
@@ -413,7 +413,7 @@ void DES_CBC_decrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length)
 }
 #endif
 
-#if defined(CTR) && (CTR == 1)
+#if DES_ENABLE_CTR
 void DES_CTR_xcrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length)
 {
   uint8_t buffer[DES_BLOCKLEN];
@@ -434,7 +434,7 @@ void DES_CTR_xcrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length)
 }
 #endif
 
-#if defined(CFB64) && (CFB64 == 1)
+#if DES_ENABLE_CFB64
 void DES_CFB64_encrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length)
 {
   uint8_t keystream[DES_BLOCKLEN];
@@ -469,7 +469,7 @@ void DES_CFB64_decrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length)
 }
 #endif
 
-#if defined(CFB8) && (CFB8 == 1)
+#if DES_ENABLE_CFB8
 void DES_CFB8_encrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length)
 {
   uint8_t keystream[DES_BLOCKLEN];
@@ -498,7 +498,7 @@ void DES_CFB8_decrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length)
 }
 #endif
 
-#if defined(CFB1) && (CFB1 == 1)
+#if DES_ENABLE_CFB1
 /* Shift the 64-bit feedback register left one bit, inserting the ciphertext bit */
 static void cfb1_shift_iv(uint8_t* iv, uint8_t ct_bit)
 {
@@ -541,7 +541,7 @@ void DES_CFB1_decrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t bit_lengt
 }
 #endif
 
-#if defined(OFB) && (OFB == 1)
+#if DES_ENABLE_OFB
 void DES_OFB_xcrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length)
 {
   for (size_t i = 0; i < length; i += DES_BLOCKLEN)
@@ -561,7 +561,7 @@ void DES_OFB_xcrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length)
 /* Public Functions: Triple DES (3DES / TDES)                                */
 /*****************************************************************************/
 
-#if defined(TDES) && (TDES == 1)
+#if DES_ENABLE_TDES
 
 void DES3_init_ctx(struct DES3_ctx* ctx, const uint8_t* key, size_t keylen)
 {
@@ -601,6 +601,7 @@ static void des3_encrypt_block(const struct DES3_ctx* ctx, uint8_t* buf)
   des_cipher_block(&ctx->Sk[32], buf, 0); /* Encrypt K3 */
 }
 
+#if (DES_ENABLE_ECB == 1) || (DES_ENABLE_CBC == 1)
 /* 3DES Core Decryption: D(K1) -> E(K2) -> D(K3) */
 static void des3_decrypt_block(const struct DES3_ctx* ctx, uint8_t* buf)
 {
@@ -608,8 +609,9 @@ static void des3_decrypt_block(const struct DES3_ctx* ctx, uint8_t* buf)
   des_cipher_block(&ctx->Sk[16], buf, 0); /* Encrypt K2 */
   des_cipher_block(&ctx->Sk[0],  buf, 1); /* Decrypt K1 */
 }
+#endif
 
-#if defined(ECB) && (ECB == 1)
+#if DES_ENABLE_ECB
 void DES3_ECB_encrypt(const struct DES3_ctx* ctx, uint8_t* buf)
 {
   des3_encrypt_block(ctx, buf);
@@ -621,7 +623,7 @@ void DES3_ECB_decrypt(const struct DES3_ctx* ctx, uint8_t* buf)
 }
 #endif
 
-#if defined(CBC) && (CBC == 1)
+#if DES_ENABLE_CBC
 void DES3_CBC_encrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length)
 {
   for (size_t i = 0; i < length; i += DES_BLOCKLEN)
@@ -651,7 +653,7 @@ void DES3_CBC_decrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length)
 }
 #endif
 
-#if defined(CTR) && (CTR == 1)
+#if DES_ENABLE_CTR
 void DES3_CTR_xcrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length)
 {
   uint8_t buffer[DES_BLOCKLEN];
@@ -672,7 +674,7 @@ void DES3_CTR_xcrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length)
 }
 #endif
 
-#if defined(CFB64) && (CFB64 == 1)
+#if DES_ENABLE_CFB64
 void DES3_CFB64_encrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length)
 {
   uint8_t keystream[DES_BLOCKLEN];
@@ -707,7 +709,7 @@ void DES3_CFB64_decrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length
 }
 #endif
 
-#if defined(CFB8) && (CFB8 == 1)
+#if DES_ENABLE_CFB8
 void DES3_CFB8_encrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length)
 {
   uint8_t keystream[DES_BLOCKLEN];
@@ -736,7 +738,7 @@ void DES3_CFB8_decrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length)
 }
 #endif
 
-#if defined(CFB1) && (CFB1 == 1)
+#if DES_ENABLE_CFB1
 void DES3_CFB1_encrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t bit_length)
 {
   uint8_t keystream[DES_BLOCKLEN];
@@ -769,7 +771,7 @@ void DES3_CFB1_decrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t bit_len
 }
 #endif
 
-#if defined(OFB) && (OFB == 1)
+#if DES_ENABLE_OFB
 void DES3_OFB_xcrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length)
 {
   for (size_t i = 0; i < length; i += DES_BLOCKLEN)
@@ -785,11 +787,12 @@ void DES3_OFB_xcrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length)
 }
 #endif
 
-#endif /* #if defined(TDES) && (TDES == 1) */
+#endif /* #if DES_ENABLE_TDES */
 
 /*****************************************************************************/
 /* Public Functions: DES / 3DES CMAC (NIST SP 800-38B)                      */
 /*****************************************************************************/
+#if DES_ENABLE_CMAC
 
 static void cmac_shift_left(const uint8_t* input, uint8_t* output)
 {
@@ -963,4 +966,6 @@ int DES_cmac(const uint8_t* key, size_t keylen, const uint8_t* message, size_t m
 #endif
   return rc;
 }
+
+#endif /* DES_ENABLE_CMAC */
 

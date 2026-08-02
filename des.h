@@ -39,72 +39,73 @@
   #error "DES_STRICT must be 0 or 1"
 #endif
 
-#ifndef CBC
-  #if defined(DES_ENABLE_CBC)
-    #define CBC DES_ENABLE_CBC
-  #else
-    #define CBC 1
-  #endif
+/*
+ * Mode selection (define to 1/0 before including this header, or via -D).
+ *
+ * Default build enables CTR and Triple-DES only. ECB, CBC, CFB*, OFB, and
+ * CMAC are opt-in so unused modes do not contribute code or context fields.
+ * Only DES_ENABLE_* names are used (no bare CBC/CTR macros) so this header
+ * can co-exist with aes.h in the same translation unit.
+ */
+#ifndef DES_ENABLE_ECB
+  #define DES_ENABLE_ECB 0
+#endif
+#ifndef DES_ENABLE_CBC
+  #define DES_ENABLE_CBC 0
+#endif
+#ifndef DES_ENABLE_CTR
+  #define DES_ENABLE_CTR 1
+#endif
+#ifndef DES_ENABLE_OFB
+  #define DES_ENABLE_OFB 0
+#endif
+#ifndef DES_ENABLE_CFB1
+  #define DES_ENABLE_CFB1 0
+#endif
+#ifndef DES_ENABLE_CFB8
+  #define DES_ENABLE_CFB8 0
+#endif
+#ifndef DES_ENABLE_CFB64
+  #define DES_ENABLE_CFB64 0
+#endif
+#ifndef DES_ENABLE_TDES
+  #define DES_ENABLE_TDES 1
+#endif
+#ifndef DES_ENABLE_CMAC
+  #define DES_ENABLE_CMAC 0
 #endif
 
-#ifndef ECB
-  #if defined(DES_ENABLE_ECB)
-    #define ECB DES_ENABLE_ECB
-  #else
-    #define ECB 1
-  #endif
+#if (DES_ENABLE_ECB != 0) && (DES_ENABLE_ECB != 1)
+  #error "DES_ENABLE_ECB must be 0 or 1"
 #endif
-
-#ifndef CTR
-  #if defined(DES_ENABLE_CTR)
-    #define CTR DES_ENABLE_CTR
-  #else
-    #define CTR 1
-  #endif
+#if (DES_ENABLE_CBC != 0) && (DES_ENABLE_CBC != 1)
+  #error "DES_ENABLE_CBC must be 0 or 1"
 #endif
-
-#ifndef TDES
-  #if defined(DES_ENABLE_TDES)
-    #define TDES DES_ENABLE_TDES
-  #else
-    #define TDES 1
-  #endif
+#if (DES_ENABLE_CTR != 0) && (DES_ENABLE_CTR != 1)
+  #error "DES_ENABLE_CTR must be 0 or 1"
 #endif
-
-#ifndef CFB1
-  #if defined(DES_ENABLE_CFB1)
-    #define CFB1 DES_ENABLE_CFB1
-  #else
-    #define CFB1 1
-  #endif
+#if (DES_ENABLE_OFB != 0) && (DES_ENABLE_OFB != 1)
+  #error "DES_ENABLE_OFB must be 0 or 1"
 #endif
-
-#ifndef CFB8
-  #if defined(DES_ENABLE_CFB8)
-    #define CFB8 DES_ENABLE_CFB8
-  #else
-    #define CFB8 1
-  #endif
+#if (DES_ENABLE_CFB1 != 0) && (DES_ENABLE_CFB1 != 1)
+  #error "DES_ENABLE_CFB1 must be 0 or 1"
 #endif
-
-#ifndef CFB64
-  #if defined(DES_ENABLE_CFB64)
-    #define CFB64 DES_ENABLE_CFB64
-  #else
-    #define CFB64 1
-  #endif
+#if (DES_ENABLE_CFB8 != 0) && (DES_ENABLE_CFB8 != 1)
+  #error "DES_ENABLE_CFB8 must be 0 or 1"
 #endif
-
-#ifndef OFB
-  #if defined(DES_ENABLE_OFB)
-    #define OFB DES_ENABLE_OFB
-  #else
-    #define OFB 1
-  #endif
+#if (DES_ENABLE_CFB64 != 0) && (DES_ENABLE_CFB64 != 1)
+  #error "DES_ENABLE_CFB64 must be 0 or 1"
+#endif
+#if (DES_ENABLE_TDES != 0) && (DES_ENABLE_TDES != 1)
+  #error "DES_ENABLE_TDES must be 0 or 1"
+#endif
+#if (DES_ENABLE_CMAC != 0) && (DES_ENABLE_CMAC != 1)
+  #error "DES_ENABLE_CMAC must be 0 or 1"
 #endif
 
 /* Modes that keep chaining state in ctx->Iv */
-#if (CBC == 1) || (CTR == 1) || (CFB1 == 1) || (CFB8 == 1) || (CFB64 == 1) || (OFB == 1)
+#if (DES_ENABLE_CBC == 1) || (DES_ENABLE_CTR == 1) || (DES_ENABLE_CFB1 == 1) || \
+    (DES_ENABLE_CFB8 == 1) || (DES_ENABLE_CFB64 == 1) || (DES_ENABLE_OFB == 1)
   #define DES_NEEDS_IV 1
 #else
   #define DES_NEEDS_IV 0
@@ -127,7 +128,7 @@ struct DES_ctx
 #endif
 };
 
-#if defined(TDES) && (TDES == 1)
+#if DES_ENABLE_TDES
 /**
  * @brief Triple DES (3DES / TDES) Context Structure
  */
@@ -150,7 +151,7 @@ void DES_secure_zero(void* memory, size_t length);
 /* Wipe a DES context (subkeys and IV when present). */
 void DES_ctx_clear(struct DES_ctx* ctx);
 
-#if defined(TDES) && (TDES == 1)
+#if DES_ENABLE_TDES
 /* Wipe a Triple DES context (subkeys and IV when present). */
 void DES3_ctx_clear(struct DES3_ctx* ctx);
 #endif
@@ -181,7 +182,7 @@ void DES_init_ctx_iv(struct DES_ctx* ctx, const uint8_t* key, const uint8_t* iv)
 void DES_ctx_set_iv(struct DES_ctx* ctx, const uint8_t* iv);
 #endif
 
-#if defined(ECB) && (ECB == 1)
+#if DES_ENABLE_ECB
 /**
  * @brief Encrypt an 8-byte block in ECB mode using Single DES.
  * @param ctx Pointer to initialized Single DES context.
@@ -197,7 +198,7 @@ void DES_ECB_encrypt(const struct DES_ctx* ctx, uint8_t* buf);
 void DES_ECB_decrypt(const struct DES_ctx* ctx, uint8_t* buf);
 #endif
 
-#if defined(CBC) && (CBC == 1)
+#if DES_ENABLE_CBC
 /**
  * @brief Encrypt buffer in CBC mode using Single DES.
  * @param ctx Pointer to initialized Single DES context.
@@ -215,7 +216,7 @@ void DES_CBC_encrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length);
 void DES_CBC_decrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length);
 #endif
 
-#if defined(CTR) && (CTR == 1)
+#if DES_ENABLE_CTR
 /**
  * @brief Encrypt/Decrypt buffer in Counter (CTR) stream mode using Single DES.
  * @param ctx Pointer to initialized Single DES context.
@@ -225,7 +226,7 @@ void DES_CBC_decrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length);
 void DES_CTR_xcrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length);
 #endif
 
-#if defined(CFB64) && (CFB64 == 1)
+#if DES_ENABLE_CFB64
 /**
  * @brief Encrypt buffer in 64-bit Cipher Feedback (CFB64) mode using Single DES.
  * @param ctx Pointer to initialized Single DES context (IV holds chaining state).
@@ -243,7 +244,7 @@ void DES_CFB64_encrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length);
 void DES_CFB64_decrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length);
 #endif
 
-#if defined(CFB8) && (CFB8 == 1)
+#if DES_ENABLE_CFB8
 /**
  * @brief Encrypt buffer in 8-bit Cipher Feedback (CFB8) mode using Single DES.
  * @param ctx Pointer to initialized Single DES context (IV holds chaining state).
@@ -261,7 +262,7 @@ void DES_CFB8_encrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length);
 void DES_CFB8_decrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length);
 #endif
 
-#if defined(CFB1) && (CFB1 == 1)
+#if DES_ENABLE_CFB1
 /**
  * @brief Encrypt bits in 1-bit Cipher Feedback (CFB1) mode using Single DES.
  *
@@ -287,7 +288,7 @@ void DES_CFB1_encrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t bit_lengt
 void DES_CFB1_decrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t bit_length);
 #endif
 
-#if defined(OFB) && (OFB == 1)
+#if DES_ENABLE_OFB
 /**
  * @brief Encrypt/Decrypt buffer in Output Feedback (OFB) stream mode using Single DES.
  * @param ctx Pointer to initialized Single DES context (IV holds chaining state).
@@ -299,7 +300,7 @@ void DES_OFB_xcrypt_buffer(struct DES_ctx* ctx, uint8_t* buf, size_t length);
 
 
 /* --- Triple DES (3DES / TDES) API --- */
-#if defined(TDES) && (TDES == 1)
+#if DES_ENABLE_TDES
 
 /**
  * @brief Initialize a Triple DES (3DES) context with key.
@@ -327,7 +328,7 @@ void DES3_init_ctx_iv(struct DES3_ctx* ctx, const uint8_t* key, size_t keylen, c
 void DES3_ctx_set_iv(struct DES3_ctx* ctx, const uint8_t* iv);
 #endif
 
-#if defined(ECB) && (ECB == 1)
+#if DES_ENABLE_ECB
 /**
  * @brief Encrypt an 8-byte block in ECB mode using 3DES.
  * @param ctx Pointer to initialized 3DES context.
@@ -343,7 +344,7 @@ void DES3_ECB_encrypt(const struct DES3_ctx* ctx, uint8_t* buf);
 void DES3_ECB_decrypt(const struct DES3_ctx* ctx, uint8_t* buf);
 #endif
 
-#if defined(CBC) && (CBC == 1)
+#if DES_ENABLE_CBC
 /**
  * @brief Encrypt buffer in CBC mode using 3DES.
  * @param ctx Pointer to initialized 3DES context.
@@ -361,7 +362,7 @@ void DES3_CBC_encrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length);
 void DES3_CBC_decrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length);
 #endif
 
-#if defined(CTR) && (CTR == 1)
+#if DES_ENABLE_CTR
 /**
  * @brief Encrypt/Decrypt buffer in Counter (CTR) stream mode using 3DES.
  * @param ctx Pointer to initialized 3DES context.
@@ -371,7 +372,7 @@ void DES3_CBC_decrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length);
 void DES3_CTR_xcrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length);
 #endif
 
-#if defined(CFB64) && (CFB64 == 1)
+#if DES_ENABLE_CFB64
 /**
  * @brief Encrypt buffer in 64-bit Cipher Feedback (CFB64) mode using 3DES.
  * @param ctx Pointer to initialized 3DES context (IV holds chaining state).
@@ -389,7 +390,7 @@ void DES3_CFB64_encrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length
 void DES3_CFB64_decrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length);
 #endif
 
-#if defined(CFB8) && (CFB8 == 1)
+#if DES_ENABLE_CFB8
 /**
  * @brief Encrypt buffer in 8-bit Cipher Feedback (CFB8) mode using 3DES.
  * @param ctx Pointer to initialized 3DES context (IV holds chaining state).
@@ -407,7 +408,7 @@ void DES3_CFB8_encrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length)
 void DES3_CFB8_decrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length);
 #endif
 
-#if defined(CFB1) && (CFB1 == 1)
+#if DES_ENABLE_CFB1
 /**
  * @brief Encrypt bits in 1-bit Cipher Feedback (CFB1) mode using 3DES.
  *
@@ -433,7 +434,7 @@ void DES3_CFB1_encrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t bit_len
 void DES3_CFB1_decrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t bit_length);
 #endif
 
-#if defined(OFB) && (OFB == 1)
+#if DES_ENABLE_OFB
 /**
  * @brief Encrypt/Decrypt buffer in Output Feedback (OFB) stream mode using 3DES.
  * @param ctx Pointer to initialized 3DES context (IV holds chaining state).
@@ -443,10 +444,11 @@ void DES3_CFB1_decrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t bit_len
 void DES3_OFB_xcrypt_buffer(struct DES3_ctx* ctx, uint8_t* buf, size_t length);
 #endif
 
-#endif /* #if defined(TDES) && (TDES == 1) */
+#endif /* #if DES_ENABLE_TDES */
 
 
 /* --- DES / 3DES CMAC (NIST SP 800-38B) --- */
+#if DES_ENABLE_CMAC
 
 /**
  * @brief Calculate NIST SP 800-38B CMAC tag (Zero IV).
@@ -470,6 +472,8 @@ int DES_cmac(const uint8_t* key, size_t keylen, const uint8_t* message, size_t m
  * @return 0 on success, -1 on invalid key length.
  */
 int DES_cmac_with_iv(const uint8_t* key, size_t keylen, const uint8_t* message, size_t message_len, const uint8_t* iv, uint8_t* cmac_out);
+
+#endif /* DES_ENABLE_CMAC */
 
 #ifdef __cplusplus
 }

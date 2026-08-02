@@ -12,8 +12,8 @@
 #include "test_vectors.h"
 
 #if defined(DES_CAVP) && (DES_CAVP == 1) && \
-    (ECB == 1) && (CBC == 1) && (CFB1 == 1) && (CFB8 == 1) && \
-    (CFB64 == 1) && (OFB == 1) && (TDES == 1)
+    (DES_ENABLE_ECB == 1) && (DES_ENABLE_CBC == 1) && (DES_ENABLE_CFB1 == 1) && (DES_ENABLE_CFB8 == 1) && \
+    (DES_ENABLE_CFB64 == 1) && (DES_ENABLE_OFB == 1) && (DES_ENABLE_TDES == 1)
 /* Implemented in cavp.c; runs the full NIST CAVP TDES corpora */
 #define DES_CAVP_AVAILABLE 1
 MunitResult test_cavp(const MunitParameter params[], void* data);
@@ -641,7 +641,7 @@ static MunitResult test_des_secure_zero_and_clear(const MunitParameter params[],
 
   DES_ctx_clear(NULL); /* must not crash */
 
-#if defined(TDES) && (TDES == 1)
+#if DES_ENABLE_TDES
   {
     struct DES3_ctx tctx;
     DES3_init_ctx(&tctx, tdes3_key, 24);

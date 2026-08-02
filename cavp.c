@@ -28,8 +28,8 @@
 
 /* The corpus needs every mode and TDES; skip the whole TU otherwise */
 #if defined(DES_CAVP) && (DES_CAVP == 1) && \
-    (ECB == 1) && (CBC == 1) && (CFB1 == 1) && (CFB8 == 1) && \
-    (CFB64 == 1) && (OFB == 1) && (TDES == 1)
+    (DES_ENABLE_ECB == 1) && (DES_ENABLE_CBC == 1) && (DES_ENABLE_CFB1 == 1) && (DES_ENABLE_CFB8 == 1) && \
+    (DES_ENABLE_CFB64 == 1) && (DES_ENABLE_OFB == 1) && (DES_ENABLE_TDES == 1)
 
 enum cavp_mode
 {
